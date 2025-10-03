@@ -98,20 +98,26 @@ For detailed setup instructions, see:
 
 ### For Administrators
 
-1. **Create a Contest**:
+1. **Login to Admin Panel**:
    - Navigate to `/admin`
+   - **Username**: `admin`
+   - **Password**: `admin123`
+   - (⚠️ Change these in production! See [ADMIN_AUTH.md](./ADMIN_AUTH.md))
+
+2. **Create a Contest**:
    - Click "Create New Contest"
    - Fill in contest details (title, description, start/end time)
-   - Add problems with:
+   - Add problems (up to 10 per contest) with:
      - Title and description
      - Difficulty level (Easy/Medium/Hard)
      - Points allocation
      - 5 test cases (input/output pairs)
 
-2. **Manage Contests**:
+3. **Manage Contests**:
    - View all existing contests
    - Copy contest URLs to share with participants
    - Access contest-specific leaderboards
+   - Logout when done
 
 ## Project Structure
 
