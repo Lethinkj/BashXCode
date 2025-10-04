@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Contest, Problem, Submission } from '@/types';
@@ -36,19 +36,19 @@ export default function ContestPage({ params }: { params: Promise<{ id: string }
       setUserId(user.id);
       setUserEmail(user.email);
     });
-  }, []);
+  }, [params, router]);
 
   useEffect(() => {
     if (contestId) {
       fetchContest();
     }
-  }, [contestId]);
+  }, [contestId, fetchContest]);
 
   useEffect(() => {
     if (selectedProblem) {
       fetchSubmissions();
     }
-  }, [selectedProblem]);
+  }, [selectedProblem, fetchSubmissions]);
 
   // Countdown timer for contest start
   useEffect(() => {
@@ -84,16 +84,16 @@ export default function ContestPage({ params }: { params: Promise<{ id: string }
     return () => clearInterval(interval);
   }, [contest]);
 
-  const fetchContest = async () => {
+  const fetchContest = useCallback(async () => {
     const response = await fetch(`/api/contests/${contestId}`);
     const data = await response.json();
     setContest(data);
     if (data.problems.length > 0) {
       setSelectedProblem(data.problems[0]);
     }
-  };
+  }, [contestId]);
 
-  const fetchSubmissions = async () => {
+  const fetchSubmissions = useCallback(async () => {
     if (!selectedProblem || !contestId || !userId) return;
     const response = await fetch(
       `/api/submissions?contestId=${contestId}&userId=${userId}`
@@ -109,7 +109,7 @@ export default function ContestPage({ params }: { params: Promise<{ id: string }
     } else {
       setAllTestsPassed(false);
     }
-  };
+  }, [selectedProblem, contestId, userId]);
 
   const handleSubmit = async () => {
     if (!selectedProblem || !contestId) return;
@@ -433,7 +433,7 @@ int main() {
             </div>
             <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6">
               <p className="text-yellow-800 text-sm">
-                <span className="font-semibold">📌 Tip:</span> Stay on this page. You'll be automatically redirected when the contest starts!
+                <span className="font-semibold">📌 Tip:</span> Stay on this page. You&apos;ll be automatically redirected when the contest starts!
               </p>
             </div>
             <Link 

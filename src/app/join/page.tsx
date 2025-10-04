@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { getAuthToken, clearAuthToken, getTimeRemaining } from '@/lib/auth';
@@ -15,20 +15,7 @@ export default function JoinContestPage() {
   const [myContests, setMyContests] = useState<Contest[]>([]);
   const [loadingContests, setLoadingContests] = useState(true);
 
-  useEffect(() => {
-    // Check authentication
-    const authUser = getAuthToken();
-    if (!authUser) {
-      router.push('/login');
-      return;
-    }
-    setUser(authUser);
-
-    // Fetch user's contests
-    fetchMyContests(authUser.id);
-  }, []);
-
-  const fetchMyContests = async (userId: string) => {
+  const fetchMyContests = useCallback(async (userId: string) => {
     try {
       const response = await fetch(`/api/contests?userId=${userId}`);
       if (response.ok) {
@@ -40,7 +27,20 @@ export default function JoinContestPage() {
     } finally {
       setLoadingContests(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    // Check authentication
+    const authUser = getAuthToken();
+    if (!authUser) {
+      router.push('/login');
+      return;
+    }
+    setUser(authUser);
+
+    // Fetch user's contests
+    fetchMyContests(authUser.id);
+  }, [router, fetchMyContests]);
 
   const handleJoinContest = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -160,7 +160,7 @@ export default function JoinContestPage() {
                     required
                   />
                   <p className="mt-2 text-sm text-gray-500">
-                    Usually a 6-character code like "ALGO01"
+                    Usually a 6-character code like &quot;ALGO01&quot;
                   </p>
                 </div>
 
