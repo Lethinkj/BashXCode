@@ -639,10 +639,10 @@ export default function AdminPage() {
                     Copy URL
                   </button>
                   <Link
-                    href={`/contest/${contest.id}/leaderboard`}
+                    href={`/admin/contest/${contest.id}/leaderboard`}
                     className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 text-sm flex items-center"
                   >
-                    Leaderboard
+                    📊 Admin Leaderboard
                   </Link>
                   <button
                     onClick={() => handleDeleteContest(contest.id, contest.title)}

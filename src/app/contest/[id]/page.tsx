@@ -19,12 +19,15 @@ export default function ContestPage({ params }: { params: Promise<{ id: string }
   const [language, setLanguage] = useState('python');
   const [userId, setUserId] = useState('');
   const [userEmail, setUserEmail] = useState('');
+  const [userName, setUserName] = useState('');
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [testInput, setTestInput] = useState('');
   const [testOutput, setTestOutput] = useState('');
   const [allTestsPassed, setAllTestsPassed] = useState(false);
   const [testingAllCases, setTestingAllCases] = useState(false);
   const [timeUntilStart, setTimeUntilStart] = useState<string>('');
+  const [tabSwitchCount, setTabSwitchCount] = useState(0);
+  const [showTabWarning, setShowTabWarning] = useState(false);
 
   // Define fetch functions before useEffect hooks
   const fetchContest = useCallback(async () => {
@@ -64,6 +67,7 @@ export default function ContestPage({ params }: { params: Promise<{ id: string }
       }
       setUserId(user.id);
       setUserEmail(user.email);
+      setUserName(user.fullName);
     });
   }, [params, router]);
 
@@ -112,6 +116,44 @@ export default function ContestPage({ params }: { params: Promise<{ id: string }
 
     return () => clearInterval(interval);
   }, [contest]);
+
+  // Tab switch detection
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        // User switched away from tab
+        setTabSwitchCount(prev => {
+          const newCount = prev + 1;
+          // Log tab switch for admin monitoring
+          if (contestId && userId) {
+            fetch('/api/log-tab-switch', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                contestId,
+                userId,
+                userEmail,
+                userName,
+                timestamp: new Date().toISOString(),
+                switchCount: newCount
+              }),
+            }).catch(err => console.error('Failed to log tab switch:', err));
+          }
+          return newCount;
+        });
+        setShowTabWarning(true);
+        
+        // Auto-hide warning after 5 seconds
+        setTimeout(() => setShowTabWarning(false), 5000);
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [contestId, userId, userEmail]);
 
   const handleSubmit = async () => {
     if (!selectedProblem || !contestId) return;
@@ -242,28 +284,7 @@ export default function ContestPage({ params }: { params: Promise<{ id: string }
       return;
     }
 
-    // Try client-side execution first (instant for JS/Python)
-    if (language === 'javascript' || language === 'python') {
-      setTestOutput('⚡ Running in browser...');
-      
-      try {
-        const { executeInBrowser } = await import('@/lib/clientExecution');
-        const result = await executeInBrowser(code, language, testInput);
-        
-        if (result) {
-          if (result.error) {
-            setTestOutput(`❌ Error:\n${result.error}\n\n⚡ Execution Time: ${result.executionTime}ms (Browser)`);
-          } else {
-            setTestOutput(`✅ Success:\n${result.output}\n\n⚡ Execution Time: ${result.executionTime}ms (Browser)`);
-          }
-          return;
-        }
-      } catch (error: any) {
-        console.error('Browser execution failed, falling back to API:', error);
-      }
-    }
-
-    // Fall back to API for compiled languages or if browser execution fails
+    // Use API for all languages (consistent execution)
     setTestOutput('🌐 Running via API...');
 
     try {
@@ -276,9 +297,9 @@ export default function ContestPage({ params }: { params: Promise<{ id: string }
       const result = await response.json();
       
       if (result.error) {
-        setTestOutput(`❌ Error:\n${result.error}\n\n🌐 Execution Time: ${result.executionTime}ms (API)`);
+        setTestOutput(`❌ Error:\n${result.error}\n\n🌐 Execution Time: ${result.executionTime}ms`);
       } else {
-        setTestOutput(`✅ Success:\n${result.output}\n\n🌐 Execution Time: ${result.executionTime}ms (API)`);
+        setTestOutput(`✅ Success:\n${result.output}\n\n🌐 Execution Time: ${result.executionTime}ms`);
       }
     } catch (error: any) {
       setTestOutput(`❌ Network Error:\n${error.message || 'Failed to execute code'}`);
@@ -435,6 +456,20 @@ int main() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-primary-950 to-gray-900">
+      {/* Tab Switch Warning */}
+      {showTabWarning && (
+        <div className="fixed top-20 right-4 z-50 bg-red-500 text-white px-6 py-4 rounded-lg shadow-2xl animate-slide-up">
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">⚠️</span>
+            <div>
+              <p className="font-bold">Tab Switch Detected!</p>
+              <p className="text-sm">{userName} - Switching tabs is being monitored</p>
+              <p className="text-xs mt-1">Total switches: {tabSwitchCount}</p>
+            </div>
+          </div>
+        </div>
+      )}
+      
       <nav className="bg-white/10 backdrop-blur-md border-b border-white/10 shadow-lg">
         <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
@@ -596,7 +631,7 @@ int main() {
                 <option value="c">C</option>
               </select>
               <span className="text-sm text-gray-600 px-3 py-1 bg-gray-100 rounded-full">
-                {language === 'javascript' || language === 'python' ? '⚡ Instant' : '🌐 API'}
+                🌐 API Mode
               </span>
             </div>
             <div className="flex gap-2">
@@ -640,6 +675,23 @@ int main() {
               options={{
                 minimap: { enabled: false },
                 fontSize: 14,
+                // Disable copy-paste to prevent cheating
+                contextmenu: false,
+                quickSuggestions: false,
+                wordBasedSuggestions: 'off',
+              }}
+              onMount={(editor) => {
+                // Prevent copy, cut, and paste
+                editor.onKeyDown((e) => {
+                  const isCopy = (e.ctrlKey || e.metaKey) && e.code === 'KeyC';
+                  const isCut = (e.ctrlKey || e.metaKey) && e.code === 'KeyX';
+                  const isPaste = (e.ctrlKey || e.metaKey) && e.code === 'KeyV';
+                  
+                  if (isCopy || isCut || isPaste) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                  }
+                });
               }}
             />
             
