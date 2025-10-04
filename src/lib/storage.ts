@@ -247,6 +247,12 @@ export const submissionStorage = {
 
 export const leaderboardService = {
   getLeaderboard: async (contestId: string): Promise<LeaderboardEntry[]> => {
+    // Get contest start time for time-to-solve calculation
+    const contestRows = await sql`
+      SELECT start_time FROM contests WHERE id = ${contestId}
+    `;
+    const contestStartTime = contestRows.length > 0 ? contestRows[0].start_time : null;
+
     const rows = await sql`
       WITH best_submissions AS (
         SELECT DISTINCT ON (user_id, problem_id)
@@ -266,17 +272,18 @@ export const leaderboardService = {
         SUM(bs.points) as total_points,
         COUNT(DISTINCT bs.problem_id) as solved_problems,
         MAX(bs.submitted_at) as last_submission_time,
+        MIN(bs.submitted_at) as first_submission_time,
         json_agg(
           json_build_object(
             'problemId', bs.problem_id,
             'points', bs.points,
             'time', bs.submitted_at
-          )
+          ) ORDER BY bs.submitted_at
         ) as submissions
       FROM best_submissions bs
       JOIN users u ON bs.user_id = u.id
       GROUP BY bs.user_id, u.email, u.full_name
-      ORDER BY total_points DESC, last_submission_time ASC
+      ORDER BY total_points DESC, solved_problems DESC, first_submission_time ASC
     `;
     
     return rows.map(row => ({
