@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { getAuthToken, clearAuthToken, getTimeRemaining } from '@/lib/auth';
 import { Contest } from '@/types';
+import Logo from '@/components/Logo';
 
 export default function JoinContestPage() {
   const router = useRouter();
@@ -102,22 +103,23 @@ export default function JoinContestPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-primary-950 to-gray-900">
       {/* Navigation */}
-      <nav className="bg-white shadow-sm border-b">
+      <nav className="bg-white/10 backdrop-blur-md border-b border-white/10 shadow-lg">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <div>
-              <h1 className="text-2xl font-bold text-primary-600">Clan Contests</h1>
+            <div className="flex items-center gap-3">
+              <Logo size="sm" />
+              <h1 className="text-2xl font-bold text-white">Aura-7F Contests</h1>
             </div>
             <div className="flex items-center gap-4">
-              <div className="text-sm text-gray-600">
-                <span className="font-medium text-gray-900">{user.fullName}</span>
-                <span className="ml-2 text-gray-400">({user.email})</span>
+              <div className="text-sm">
+                <span className="font-medium text-white">{user.fullName}</span>
+                <span className="ml-2 text-gray-300">({user.email})</span>
               </div>
               <button
                 onClick={handleLogout}
-                className="text-sm text-gray-600 hover:text-gray-900"
+                className="px-4 py-2 text-sm text-white bg-primary-600 hover:bg-primary-700 rounded-lg font-semibold transition-colors"
               >
                 Logout
               </button>
@@ -130,7 +132,7 @@ export default function JoinContestPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Join Contest Section */}
           <div>
-            <div className="bg-white rounded-xl shadow-lg p-8">
+            <div className="bg-white/95 backdrop-blur-sm rounded-xl shadow-2xl p-8">
               <h2 className="text-2xl font-bold text-gray-900 mb-4">
                 Join a Contest
               </h2>
@@ -175,9 +177,9 @@ export default function JoinContestPage() {
             </div>
 
             {/* Quick Tips */}
-            <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <h3 className="font-semibold text-blue-900 mb-2">💡 Quick Tips</h3>
-              <ul className="text-sm text-blue-800 space-y-1">
+            <div className="mt-6 bg-primary-500/10 border border-primary-400/30 rounded-lg p-4 backdrop-blur-sm">
+              <h3 className="font-semibold text-white mb-2">💡 Quick Tips</h3>
+              <ul className="text-sm text-gray-200 space-y-1">
                 <li>• Contest codes are case-insensitive</li>
                 <li>• You can join multiple contests</li>
                 <li>• Contests may have start/end times</li>
@@ -188,7 +190,7 @@ export default function JoinContestPage() {
 
           {/* My Contests Section */}
           <div>
-            <div className="bg-white rounded-xl shadow-lg p-8">
+            <div className="bg-white/95 backdrop-blur-sm rounded-xl shadow-2xl p-8">
               <h2 className="text-2xl font-bold text-gray-900 mb-4">
                 My Contests
               </h2>

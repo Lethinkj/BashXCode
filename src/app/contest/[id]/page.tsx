@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { Contest, Problem, Submission } from '@/types';
 import { getAuthToken, isContestActive, hasContestStarted, hasContestEnded, getTimeRemaining } from '@/lib/auth';
 import dynamic from 'next/dynamic';
+import Logo from '@/components/Logo';
 
 const Editor = dynamic(() => import('@monaco-editor/react'), { ssr: false });
 
@@ -450,31 +451,32 @@ int main() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <nav className="bg-white shadow-lg">
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-primary-950 to-gray-900">
+      <nav className="bg-white/10 backdrop-blur-md border-b border-white/10 shadow-lg">
         <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <Link href="/join" className="text-xl font-bold text-primary-600">
-              {contest.title}
+            <Link href="/join" className="flex items-center gap-3 text-xl font-bold text-white hover:text-primary-300 transition-colors">
+              <Logo size="sm" />
+              <span>{contest.title}</span>
             </Link>
             <div className="flex items-center gap-4">
               {contest && (
                 <div className="text-sm">
                   {isContestActive(contest.startTime, contest.endTime) ? (
-                    <span className="text-green-600 font-semibold">⏰ {getTimeRemaining(contest.endTime)} remaining</span>
+                    <span className="text-green-400 font-semibold">⏰ {getTimeRemaining(contest.endTime)} remaining</span>
                   ) : hasContestEnded(contest.endTime) ? (
-                    <span className="text-gray-500">Contest Ended</span>
+                    <span className="text-gray-400">Contest Ended</span>
                   ) : (
-                    <span className="text-blue-600">Starts: {new Date(contest.startTime).toLocaleString()}</span>
+                    <span className="text-blue-400">Starts: {new Date(contest.startTime).toLocaleString()}</span>
                   )}
                 </div>
               )}
-              <span className="text-gray-700">{userEmail}</span>
+              <span className="text-gray-200">{userEmail}</span>
               <Link
                 href={`/contest/${contestId}/leaderboard`}
-                className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700"
+                className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 font-semibold"
               >
-                Leaderboard
+                🏆 Leaderboard
               </Link>
             </div>
           </div>
@@ -483,9 +485,9 @@ int main() {
 
       <div className="flex h-[calc(100vh-4rem)]">
         {/* Problems Sidebar */}
-        <div className="w-64 bg-white shadow-lg overflow-y-auto">
+        <div className="w-64 bg-white/95 backdrop-blur-sm shadow-lg overflow-y-auto border-r border-gray-200">
           <div className="p-4">
-            <h3 className="font-bold text-lg mb-4 text-gray-900">Problems</h3>
+            <h3 className="font-bold text-lg mb-4 text-gray-900">📝 Problems</h3>
             {contest.problems.map((problem) => {
               const userSubmissions = submissions.filter(s => s.problemId === problem.id);
               const solved = userSubmissions.some(s => s.status === 'accepted');

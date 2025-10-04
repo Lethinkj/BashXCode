@@ -12,6 +12,7 @@ const DEFAULT_ADMIN_PASSWORD = 'admin123';
 export default function AdminPage() {
   const [contests, setContests] = useState<Contest[]>([]);
   const [showForm, setShowForm] = useState(false);
+  const [editingContestId, setEditingContestId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -131,25 +132,105 @@ export default function AdminPage() {
     }
   };
 
+  // Helper to format datetime for input (YYYY-MM-DDTHH:mm)
+  const formatDateTimeForInput = (dateString: string): string => {
+    if (!dateString) return '';
+    try {
+      const date = new Date(dateString);
+      // Format as YYYY-MM-DDTHH:mm in local timezone
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const hours = String(date.getHours()).padStart(2, '0');
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      return `${year}-${month}-${day}T${hours}:${minutes}`;
+    } catch (error) {
+      console.error('Date format error:', error);
+      return '';
+    }
+  };
+
+  // Helper to convert local datetime-local input to ISO string
+  const convertLocalToISO = (localDateTime: string): string => {
+    if (!localDateTime) return '';
+    // datetime-local gives us "YYYY-MM-DDTHH:mm"
+    // We need to convert to ISO string preserving the local time
+    const date = new Date(localDateTime);
+    return date.toISOString();
+  };
+
+  const handleEditContest = (contest: Contest) => {
+    setEditingContestId(contest.id);
+    setFormData({
+      title: contest.title,
+      description: contest.description,
+      startTime: formatDateTimeForInput(contest.startTime),
+      endTime: formatDateTimeForInput(contest.endTime),
+    });
+    setProblems(contest.problems);
+    setShowForm(true);
+    // Scroll to form
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleCancelEdit = () => {
+    setEditingContestId(null);
+    setShowForm(false);
+    setFormData({ title: '', description: '', startTime: '', endTime: '' });
+    setProblems([]);
+  };
+
   const handleCreateContest = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    const contest = {
+    // Validate times
+    if (!formData.startTime || !formData.endTime) {
+      alert('Please set both start and end times');
+      return;
+    }
+
+    const startDate = new Date(formData.startTime);
+    const endDate = new Date(formData.endTime);
+
+    if (endDate <= startDate) {
+      alert('End time must be after start time');
+      return;
+    }
+
+    const contestData = {
       ...formData,
+      startTime: convertLocalToISO(formData.startTime),
+      endTime: convertLocalToISO(formData.endTime),
       problems,
     };
 
-    const response = await fetch('/api/contests', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(contest),
-    });
+    try {
+      const url = editingContestId 
+        ? `/api/contests/${editingContestId}` 
+        : '/api/contests';
+      
+      const method = editingContestId ? 'PUT' : 'POST';
 
-    if (response.ok) {
-      setShowForm(false);
-      setFormData({ title: '', description: '', startTime: '', endTime: '' });
-      setProblems([]);
-      fetchContests();
+      const response = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(contestData),
+      });
+
+      if (response.ok) {
+        alert(editingContestId ? 'Contest updated successfully!' : 'Contest created successfully!');
+        setShowForm(false);
+        setEditingContestId(null);
+        setFormData({ title: '', description: '', startTime: '', endTime: '' });
+        setProblems([]);
+        fetchContests();
+      } else {
+        const error = await response.json();
+        alert(`Failed to ${editingContestId ? 'update' : 'create'} contest: ${error.error || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('Contest operation error:', error);
+      alert('Network error occurred');
     }
   };
 
@@ -359,13 +440,13 @@ export default function AdminPage() {
             onClick={() => setShowForm(!showForm)}
             className="bg-primary-600 text-white px-6 py-2 rounded-lg hover:bg-primary-700"
           >
-            {showForm ? 'Cancel' : 'Create New Contest'}
+            {showForm ? 'Cancel' : (editingContestId ? 'Cancel Edit' : 'Create New Contest')}
           </button>
         </div>
 
         {showForm && (
           <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">Create Contest</h2>
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">{editingContestId ? 'Edit Contest' : 'Create Contest'}</h2>
             <form onSubmit={handleCreateContest} className="space-y-6">
               <div className="grid md:grid-cols-2 gap-6">
                 <div>
@@ -510,7 +591,7 @@ export default function AdminPage() {
                 className="w-full bg-primary-600 text-white py-3 rounded-lg hover:bg-primary-700 font-semibold"
                 disabled={problems.length === 0}
               >
-                Create Contest
+                {editingContestId ? 'Update Contest' : 'Create Contest'}
               </button>
             </form>
           </div>
@@ -543,6 +624,12 @@ export default function AdminPage() {
                       </button>
                     )}
                   </div>
+                  <button
+                    onClick={() => handleEditContest(contest)}
+                    className="mt-3 bg-amber-500 text-white px-4 py-2 rounded-lg hover:bg-amber-600 font-semibold text-sm"
+                  >
+                    ✏️ Edit Contest
+                  </button>
                 </div>
                 <div className="flex gap-2">
                   <button

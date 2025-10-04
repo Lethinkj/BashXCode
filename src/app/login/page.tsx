@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { setAuthToken } from '@/lib/auth';
+import Logo from '@/components/Logo';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -60,8 +61,11 @@ export default function LoginPage() {
       <div className="max-w-md w-full">
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-primary-600 mb-2">
-            Clan Contest Platform
+          <div className="flex justify-center mb-4">
+            <Logo size="lg" />
+          </div>
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-primary-600 to-primary-400 bg-clip-text text-transparent mb-2">
+            Aura-7F Contests
           </h1>
           <p className="text-gray-600">Welcome back! Sign in to continue</p>
         </div>

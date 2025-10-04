@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { LeaderboardEntry, Contest } from '@/types';
+import Logo from '@/components/Logo';
 
 export default function LeaderboardPage({ params }: { params: Promise<{ id: string }> }) {
   const [contestId, setContestId] = useState<string>('');
@@ -47,16 +48,17 @@ export default function LeaderboardPage({ params }: { params: Promise<{ id: stri
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <nav className="bg-white shadow-lg">
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-primary-950 to-gray-900">
+      <nav className="bg-white/10 backdrop-blur-md border-b border-white/10 shadow-lg">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <Link href={`/contest/${contestId}`} className="text-xl font-bold text-primary-600">
-              {contest?.title} - Leaderboard
+            <Link href={`/contest/${contestId}`} className="flex items-center gap-3 text-xl font-bold text-white hover:text-primary-300 transition-colors">
+              <Logo size="sm" />
+              <span>{contest?.title} - Leaderboard</span>
             </Link>
             <Link
               href={`/contest/${contestId}`}
-              className="text-gray-700 hover:text-primary-600"
+              className="px-4 py-2 text-white bg-primary-600 hover:bg-primary-700 rounded-lg font-semibold transition-colors"
             >
               Back to Contest
             </Link>
@@ -65,9 +67,9 @@ export default function LeaderboardPage({ params }: { params: Promise<{ id: stri
       </nav>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="bg-white rounded-lg shadow-lg overflow-hidden">
-          <div className="bg-primary-600 text-white px-6 py-4">
-            <h1 className="text-2xl font-bold">Contest Leaderboard</h1>
+        <div className="bg-white/95 backdrop-blur-sm rounded-lg shadow-2xl overflow-hidden">
+          <div className="bg-gradient-to-r from-primary-600 to-primary-500 text-white px-6 py-4">
+            <h1 className="text-2xl font-bold">🏆 Contest Leaderboard</h1>
             <p className="text-primary-100 mt-1">Real-time rankings based on points and solve time</p>
           </div>
 
@@ -144,16 +146,16 @@ export default function LeaderboardPage({ params }: { params: Promise<{ id: stri
 
         {contest && (
           <div className="mt-8 grid md:grid-cols-3 gap-6">
-            <div className="bg-white rounded-lg shadow p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Total Participants</h3>
+            <div className="bg-white/95 backdrop-blur-sm rounded-lg shadow-xl p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">👥 Total Participants</h3>
               <p className="text-3xl font-bold text-primary-600">{leaderboard.length}</p>
             </div>
-            <div className="bg-white rounded-lg shadow p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Total Problems</h3>
+            <div className="bg-white/95 backdrop-blur-sm rounded-lg shadow-xl p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">📝 Total Problems</h3>
               <p className="text-3xl font-bold text-primary-600">{contest.problems.length}</p>
             </div>
-            <div className="bg-white rounded-lg shadow p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Total Points</h3>
+            <div className="bg-white/95 backdrop-blur-sm rounded-lg shadow-xl p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">🎯 Total Points</h3>
               <p className="text-3xl font-bold text-primary-600">
                 {contest.problems.reduce((sum, p) => sum + p.points, 0)}
               </p>

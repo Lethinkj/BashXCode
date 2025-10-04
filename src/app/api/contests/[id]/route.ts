@@ -26,6 +26,40 @@ export async function PUT(
   const { id } = await params;
   try {
     const body = await request.json();
+    
+    // Validate required fields if provided
+    if (body.problems !== undefined) {
+      if (!Array.isArray(body.problems) || body.problems.length === 0) {
+        return NextResponse.json(
+          { error: 'Contest must have at least one problem' },
+          { status: 400 }
+        );
+      }
+      
+      // Validate each problem has required fields
+      for (const problem of body.problems) {
+        if (!problem.title || !problem.description || !problem.points || !problem.testCases || problem.testCases.length === 0) {
+          return NextResponse.json(
+            { error: 'Each problem must have title, description, points, and at least one test case' },
+            { status: 400 }
+          );
+        }
+      }
+    }
+    
+    // Validate time fields
+    if (body.startTime && body.endTime) {
+      const startTime = new Date(body.startTime);
+      const endTime = new Date(body.endTime);
+      
+      if (endTime <= startTime) {
+        return NextResponse.json(
+          { error: 'End time must be after start time' },
+          { status: 400 }
+        );
+      }
+    }
+    
     const updated = await contestStorage.update(id, body);
     
     if (!updated) {
@@ -34,6 +68,7 @@ export async function PUT(
     
     return NextResponse.json(updated);
   } catch (error) {
+    console.error('Failed to update contest:', error);
     return NextResponse.json({ error: 'Failed to update contest' }, { status: 500 });
   }
 }
