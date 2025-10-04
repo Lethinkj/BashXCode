@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import postgres from 'postgres';
+import sql, { queryWithRetry } from '@/lib/db';
 import { hashPassword, isValidEmail, isValidPassword } from '@/lib/auth';
-
-const sql = postgres(process.env.DATABASE_URL!, {
-  ssl: 'require'
-});
 
 export async function POST(request: NextRequest) {
   try {

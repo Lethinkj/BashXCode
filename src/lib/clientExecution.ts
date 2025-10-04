@@ -35,7 +35,7 @@ export async function executeInBrowser(
   
   try {
     if (language === 'javascript') {
-      return executeJavaScript(code, input, startTime);
+      return await executeJavaScript(code, input, startTime);
     }
     
     if (language === 'python') {
@@ -57,11 +57,11 @@ export async function executeInBrowser(
  * Execute JavaScript in browser
  * Safe execution using Function() with timeout
  */
-function executeJavaScript(
+async function executeJavaScript(
   code: string,
   input: string,
   startTime: number
-): CodeExecutionResult {
+): Promise<CodeExecutionResult> {
   try {
     // Create isolated execution environment
     const logs: string[] = [];
@@ -82,14 +82,23 @@ function executeJavaScript(
       ${code}
     `;
     
-    // Execute with timeout (3 seconds)
+    // Execute with timeout using Promise.race
     const fn = new Function('mockConsole', wrappedCode);
-    const timeout = setTimeout(() => {
-      throw new Error('Time Limit Exceeded (3s)');
-    }, 3000);
     
-    fn(mockConsole);
-    clearTimeout(timeout);
+    const executionPromise = new Promise<void>((resolve, reject) => {
+      try {
+        fn(mockConsole);
+        resolve();
+      } catch (error) {
+        reject(error);
+      }
+    });
+    
+    const timeoutPromise = new Promise<void>((_, reject) => {
+      setTimeout(() => reject(new Error('Time Limit Exceeded (3s)')), 3000);
+    });
+    
+    await Promise.race([executionPromise, timeoutPromise]);
     
     const executionTime = Date.now() - startTime;
     
@@ -100,10 +109,21 @@ function executeJavaScript(
     };
     
   } catch (error: any) {
+    const executionTime = Date.now() - startTime;
+    
+    // Check if it's a timeout error
+    if (error.message.includes('Time Limit Exceeded')) {
+      return {
+        output: '',
+        error: `Time Limit Exceeded: Code took more than 3 seconds to execute`,
+        executionTime,
+      };
+    }
+    
     return {
       output: '',
       error: `Runtime Error: ${error.message}`,
-      executionTime: Date.now() - startTime,
+      executionTime,
     };
   }
 }
@@ -159,13 +179,13 @@ def input(prompt=''):
 ${code}
 `;
     
-    // Execute with timeout
-    const timeout = setTimeout(() => {
-      throw new Error('Time Limit Exceeded (3s)');
-    }, 3000);
+    // Execute with timeout using Promise.race
+    const executionPromise = pyodideInstance.runPythonAsync(wrappedCode);
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('Time Limit Exceeded (3s)')), 3000);
+    });
     
-    await pyodideInstance.runPythonAsync(wrappedCode);
-    clearTimeout(timeout);
+    await Promise.race([executionPromise, timeoutPromise]);
     
     const executionTime = Date.now() - startTime;
     
@@ -175,6 +195,17 @@ ${code}
     };
     
   } catch (error: any) {
+    const executionTime = Date.now() - startTime;
+    
+    // Check if it's a timeout error
+    if (error.message.includes('Time Limit Exceeded')) {
+      return {
+        output: '',
+        error: `Time Limit Exceeded: Code took more than 3 seconds to execute`,
+        executionTime,
+      };
+    }
+    
     return {
       output: '',
       error: `Runtime Error: ${error.message}`,
@@ -189,13 +220,29 @@ ${code}
  */
 async function loadPyodide(): Promise<any> {
   try {
+    // Check if window.loadPyodide is available
+    if (typeof window === 'undefined') {
+      throw new Error('Not in browser environment');
+    }
+    
+    // Wait for Pyodide script to load if it's not ready yet
+    let attempts = 0;
+    while (!(window as any).loadPyodide && attempts < 50) {
+      await new Promise(resolve => setTimeout(resolve, 100)); // Wait 100ms
+      attempts++;
+    }
+    
+    if (!(window as any).loadPyodide) {
+      throw new Error('Pyodide script not loaded. Please refresh the page.');
+    }
+    
     // @ts-ignore - Pyodide is loaded via CDN
     const pyodide = await window.loadPyodide({
       indexURL: 'https://cdn.jsdelivr.net/pyodide/v0.24.1/full/',
     });
     return pyodide;
-  } catch (error) {
-    throw new Error('Failed to load Python runtime. Please check your internet connection.');
+  } catch (error: any) {
+    throw new Error(`Failed to load Python runtime: ${error.message}`);
   }
 }
 

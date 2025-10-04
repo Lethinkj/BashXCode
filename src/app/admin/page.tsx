@@ -23,21 +23,36 @@ export default function AdminPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState('');
+  
+  // Admin management state
+  const [currentAdmin, setCurrentAdmin] = useState<any>(null);
+  const [admins, setAdmins] = useState<any[]>([]);
+  const [showAdminForm, setShowAdminForm] = useState(false);
+  const [newAdminData, setNewAdminData] = useState({
+    email: '',
+    password: '',
+    fullName: '',
+    isSuperAdmin: false,
+  });
 
   useEffect(() => {
     // Check if already logged in
     const loggedIn = localStorage.getItem('adminAuthenticated');
-    if (loggedIn === 'true') {
+    const adminUser = localStorage.getItem('adminUser');
+    if (loggedIn === 'true' && adminUser) {
       setIsAuthenticated(true);
+      setCurrentAdmin(JSON.parse(adminUser));
       fetchContests();
+      fetchAdmins(JSON.parse(adminUser).id);
     }
   }, []);
 
   useEffect(() => {
-    if (isAuthenticated) {
+    if (isAuthenticated && currentAdmin) {
       fetchContests();
+      fetchAdmins(currentAdmin.id);
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, currentAdmin]);
 
   const fetchContests = async () => {
     try {
@@ -52,6 +67,67 @@ export default function AdminPage() {
     } catch (error) {
       console.error('Failed to fetch contests:', error);
       setContests([]);
+    }
+  };
+
+  const fetchAdmins = async (adminId: string) => {
+    try {
+      const response = await fetch('/api/admin/users', {
+        headers: { 'x-admin-id': adminId }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setAdmins(data.admins || []);
+      }
+    } catch (error) {
+      console.error('Failed to fetch admins:', error);
+    }
+  };
+
+  const handleCreateAdmin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!currentAdmin?.id) {
+      alert('You must be logged in as admin');
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/admin/users', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-admin-id': currentAdmin.id
+        },
+        body: JSON.stringify(newAdminData)
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        alert('Admin created successfully!');
+        setShowAdminForm(false);
+        setNewAdminData({ email: '', password: '', fullName: '', isSuperAdmin: false });
+        fetchAdmins(currentAdmin.id);
+      } else {
+        alert(`Failed to create admin: ${data.error || 'Unknown error'}`);
+      }
+    } catch (error) {
+      alert('Network error: Failed to create admin');
+      console.error('Create admin error:', error);
+    }
+  };
+
+  const handleToggleAdminStatus = async (adminId: string, currentStatus: boolean) => {
+    if (!confirm(`Are you sure you want to ${currentStatus ? 'disable' : 'enable'} this admin?`)) {
+      return;
+    }
+
+    try {
+      // This would require a new API endpoint to update admin status
+      alert('Admin status toggle not yet implemented');
+    } catch (error) {
+      console.error('Failed to toggle admin status:', error);
     }
   };
 
@@ -120,22 +196,74 @@ export default function AdminPage() {
     alert('Contest URL copied to clipboard!');
   };
 
-  const handleLogin = (e: React.FormEvent) => {
+  const copyContestCode = (contestCode: string) => {
+    navigator.clipboard.writeText(contestCode);
+    alert(`Contest code "${contestCode}" copied to clipboard!`);
+  };
+
+  const handleDeleteContest = async (contestId: string, title: string) => {
+    const confirmed = confirm(
+      `Are you sure you want to delete the contest "${title}"?\n\n` +
+      `This will permanently delete:\n` +
+      `- The contest\n` +
+      `- All problems\n` +
+      `- All submissions\n` +
+      `- All leaderboard data\n\n` +
+      `This action cannot be undone!`
+    );
+
+    if (!confirmed) return;
+
+    try {
+      const response = await fetch(`/api/contests/${contestId}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        alert('Contest deleted successfully!');
+        fetchContests(); // Refresh the list
+      } else {
+        const error = await response.json();
+        alert(`Failed to delete contest: ${error.error || 'Unknown error'}`);
+      }
+    } catch (error) {
+      alert('Network error: Failed to delete contest');
+      console.error('Delete error:', error);
+    }
+  };
+
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError('');
 
-    if (username === DEFAULT_ADMIN_USERNAME && password === DEFAULT_ADMIN_PASSWORD) {
-      setIsAuthenticated(true);
-      localStorage.setItem('adminAuthenticated', 'true');
-      setLoginError('');
-    } else {
-      setLoginError('Invalid username or password');
+    try {
+      const response = await fetch('/api/admin/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: username, password })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setIsAuthenticated(true);
+        localStorage.setItem('adminAuthenticated', 'true');
+        localStorage.setItem('adminUser', JSON.stringify(data.admin));
+        setLoginError('');
+      } else {
+        setLoginError(data.error || 'Login failed');
+      }
+    } catch (error) {
+      setLoginError('Network error. Please try again.');
+      console.error('Login error:', error);
     }
   };
 
   const handleLogout = () => {
     setIsAuthenticated(false);
+    setCurrentAdmin(null);
     localStorage.removeItem('adminAuthenticated');
+    localStorage.removeItem('adminUser');
     setUsername('');
     setPassword('');
   };
@@ -153,14 +281,14 @@ export default function AdminPage() {
           <form onSubmit={handleLogin} className="space-y-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Username
+                Email
               </label>
               <input
-                type="text"
+                type="email"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-600 focus:border-transparent text-gray-900"
-                placeholder="Enter username"
+                placeholder="Enter admin email"
                 required
               />
             </div>
@@ -192,13 +320,6 @@ export default function AdminPage() {
               Login
             </button>
           </form>
-
-          <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-            <p className="text-sm text-blue-800 font-semibold mb-2">Default Credentials:</p>
-            <p className="text-sm text-blue-700">Username: <code className="bg-blue-100 px-2 py-1 rounded">admin</code></p>
-            <p className="text-sm text-blue-700">Password: <code className="bg-blue-100 px-2 py-1 rounded">admin123</code></p>
-            <p className="text-xs text-blue-600 mt-2">⚠️ Change these in production!</p>
-          </div>
 
           <div className="mt-4 text-center">
             <Link href="/" className="text-sm text-primary-600 hover:text-primary-700">
@@ -400,31 +521,199 @@ export default function AdminPage() {
           {contests.map((contest) => (
             <div key={contest.id} className="bg-white rounded-lg shadow p-6">
               <div className="flex justify-between items-start">
-                <div>
+                <div className="flex-1">
                   <h3 className="text-xl font-bold text-gray-900">{contest.title}</h3>
                   <p className="text-gray-600 mt-2">{contest.description}</p>
-                  <p className="text-sm text-gray-500 mt-2">
-                    {contest.problems.length} problems
-                  </p>
+                  <div className="flex gap-4 mt-3 text-sm text-gray-600">
+                    <span>📝 {contest.problems.length} problems</span>
+                    <span>🕒 {new Date(contest.startTime).toLocaleString()}</span>
+                    <span>⏱️ {new Date(contest.endTime).toLocaleString()}</span>
+                  </div>
+                  <div className="mt-3 flex items-center gap-2">
+                    <span className="text-sm font-semibold text-gray-700">Contest Code:</span>
+                    <code className="bg-primary-50 text-primary-700 px-3 py-1 rounded font-mono font-bold text-lg">
+                      {contest.contestCode || 'N/A'}
+                    </code>
+                    {contest.contestCode && (
+                      <button
+                        onClick={() => copyContestCode(contest.contestCode!)}
+                        className="text-primary-600 hover:text-primary-700 text-sm underline"
+                      >
+                        Copy Code
+                      </button>
+                    )}
+                  </div>
                 </div>
                 <div className="flex gap-2">
                   <button
                     onClick={() => copyContestUrl(contest.id)}
-                    className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+                    className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm"
                   >
                     Copy URL
                   </button>
                   <Link
                     href={`/contest/${contest.id}/leaderboard`}
-                    className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700"
+                    className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 text-sm flex items-center"
                   >
                     Leaderboard
                   </Link>
+                  <button
+                    onClick={() => handleDeleteContest(contest.id, contest.title)}
+                    className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 text-sm"
+                  >
+                    Delete
+                  </button>
                 </div>
               </div>
             </div>
           ))}
         </div>
+
+        {/* Admin Management Section - Only for Super Admins */}
+        {currentAdmin?.isSuperAdmin && (
+          <div className="mt-12">
+            <div className="flex justify-between items-center mb-6">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900">Admin Management</h2>
+                <p className="text-sm text-gray-600 mt-1">Manage admin users (Super Admin only)</p>
+              </div>
+              <button
+                onClick={() => setShowAdminForm(!showAdminForm)}
+                className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700"
+              >
+                {showAdminForm ? 'Cancel' : 'Add New Admin'}
+              </button>
+            </div>
+
+            {showAdminForm && (
+              <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
+                <h3 className="text-xl font-bold text-gray-900 mb-4">Create New Admin</h3>
+                <form onSubmit={handleCreateAdmin} className="space-y-4">
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                      <input
+                        type="email"
+                        value={newAdminData.email}
+                        onChange={(e) => setNewAdminData({ ...newAdminData, email: e.target.value })}
+                        className="w-full px-4 py-2 border rounded-lg text-gray-900"
+                        placeholder="admin@example.com"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
+                      <input
+                        type="text"
+                        value={newAdminData.fullName}
+                        onChange={(e) => setNewAdminData({ ...newAdminData, fullName: e.target.value })}
+                        className="w-full px-4 py-2 border rounded-lg text-gray-900"
+                        placeholder="Admin Name"
+                        required
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
+                    <input
+                      type="password"
+                      value={newAdminData.password}
+                      onChange={(e) => setNewAdminData({ ...newAdminData, password: e.target.value })}
+                      className="w-full px-4 py-2 border rounded-lg text-gray-900"
+                      placeholder="Minimum 6 characters"
+                      minLength={6}
+                      required
+                    />
+                  </div>
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      id="isSuperAdmin"
+                      checked={newAdminData.isSuperAdmin}
+                      onChange={(e) => setNewAdminData({ ...newAdminData, isSuperAdmin: e.target.checked })}
+                      className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+                    />
+                    <label htmlFor="isSuperAdmin" className="ml-2 text-sm text-gray-700">
+                      Make this admin a <strong>Super Admin</strong> (can add/remove other admins)
+                    </label>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      type="submit"
+                      className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700"
+                    >
+                      Create Admin
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowAdminForm(false)}
+                      className="bg-gray-600 text-white px-6 py-2 rounded-lg hover:bg-gray-700"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              </div>
+            )}
+
+            {/* Admins List */}
+            <div className="bg-white rounded-lg shadow-lg p-6">
+              <h3 className="text-xl font-bold text-gray-900 mb-4">All Admins ({admins.length})</h3>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Login</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {admins.map((admin) => (
+                      <tr key={admin.id} className={admin.id === currentAdmin?.id ? 'bg-blue-50' : ''}>
+                        <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {admin.email}
+                          {admin.id === currentAdmin?.id && (
+                            <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">You</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">{admin.fullName}</td>
+                        <td className="px-4 py-4 whitespace-nowrap text-sm">
+                          {admin.isSuperAdmin ? (
+                            <span className="px-2 py-1 bg-purple-100 text-purple-800 text-xs font-semibold rounded">Super Admin</span>
+                          ) : (
+                            <span className="px-2 py-1 bg-gray-100 text-gray-800 text-xs rounded">Admin</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap text-sm">
+                          {admin.isActive ? (
+                            <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded">Active</span>
+                          ) : (
+                            <span className="px-2 py-1 bg-red-100 text-red-800 text-xs rounded">Disabled</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">
+                          {admin.lastLogin ? new Date(admin.lastLogin).toLocaleDateString() : 'Never'}
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">
+                          {new Date(admin.createdAt).toLocaleDateString()}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {admins.length === 0 && (
+                  <div className="text-center py-8 text-gray-500">
+                    No admins found
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import sql, { queryWithRetry } from '@/lib/db';
 import { verifyPassword } from '@/lib/auth';
 
+/**
+ * Admin Login API
+ * POST /api/admin/login
+ */
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -15,9 +19,11 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    // Find user with retry logic
+    // Find admin user
     const result = await queryWithRetry(async (db) => await db`
-      SELECT id, email, password_hash, full_name, is_active FROM users WHERE email = ${email.toLowerCase()}
+      SELECT id, email, password_hash, full_name, is_super_admin, is_active 
+      FROM admin_users 
+      WHERE email = ${email.toLowerCase()}
     `);
     
     if (result.length === 0) {
@@ -27,44 +33,49 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    const user = result[0];
+    const admin = result[0];
     
     // Check if account is active
-    if (!user.is_active) {
+    if (!admin.is_active) {
       return NextResponse.json(
-        { error: 'Account is disabled' },
+        { error: 'Admin account is disabled' },
         { status: 403 }
       );
     }
     
     // Verify password
-    const isValid = await verifyPassword(password, user.password_hash);
+    const isValidPassword = await verifyPassword(password, admin.password_hash);
     
-    if (!isValid) {
+    if (!isValidPassword) {
       return NextResponse.json(
         { error: 'Invalid email or password' },
         { status: 401 }
       );
     }
     
-    // Update last login
-    await sql`
-      UPDATE users SET last_login = NOW() WHERE id = ${user.id}
-    `;
+    // Update last login time
+    await queryWithRetry(async (db) => await db`
+      UPDATE admin_users 
+      SET last_login = CURRENT_TIMESTAMP 
+      WHERE id = ${admin.id}
+    `);
     
-    // Return user data (without password hash)
+    // Return admin data (without password hash)
     return NextResponse.json({
       success: true,
-      user: {
-        id: user.id,
-        email: user.email,
-        fullName: user.full_name,
-      },
+      admin: {
+        id: admin.id,
+        email: admin.email,
+        fullName: admin.full_name,
+        isSuperAdmin: admin.is_super_admin,
+        isActive: admin.is_active,
+      }
     });
-  } catch (error: any) {
-    console.error('Login error:', error);
+    
+  } catch (error) {
+    console.error('Admin login error:', error);
     return NextResponse.json(
-      { error: 'Failed to login' },
+      { error: 'Internal server error' },
       { status: 500 }
     );
   }

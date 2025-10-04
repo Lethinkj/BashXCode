@@ -1,18 +1,13 @@
 import { Contest, Submission, LeaderboardEntry } from '@/types';
-import postgres from 'postgres';
-
-// Database connection
-const sql = postgres(process.env.DATABASE_URL!, {
-  ssl: 'require'
-});
+import sql, { queryWithRetry } from './db';
 
 export const contestStorage = {
   getAll: async (): Promise<Contest[]> => {
-    const rows = await sql`
+    const rows = await queryWithRetry(async (db) => await db`
       SELECT * FROM contests 
       ORDER BY created_at DESC
-    `;
-    return rows.map(row => ({
+    `);
+    return rows.map((row: any) => ({
       id: row.id,
       title: row.title,
       description: row.description,
@@ -27,13 +22,13 @@ export const contestStorage = {
   },
   
   getById: async (id: string): Promise<Contest | undefined> => {
-    const rows = await sql`
+    const rows = await queryWithRetry(async (db) => await db`
       SELECT * FROM contests 
       WHERE id = ${id}
-    `;
+    `);
     if (rows.length === 0) return undefined;
     
-    const row = rows[0];
+    const row: any = rows[0];
     return {
       id: row.id,
       title: row.title,

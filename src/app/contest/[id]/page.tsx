@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Contest, Problem, Submission } from '@/types';
+import { getAuthToken, isContestActive, hasContestStarted, hasContestEnded, getTimeRemaining } from '@/lib/auth';
 import dynamic from 'next/dynamic';
 
 const Editor = dynamic(() => import('@monaco-editor/react'), { ssr: false });
@@ -15,20 +16,25 @@ export default function ContestPage({ params }: { params: Promise<{ id: string }
   const [selectedProblem, setSelectedProblem] = useState<Problem | null>(null);
   const [code, setCode] = useState('');
   const [language, setLanguage] = useState('python');
-  const [userName, setUserName] = useState('');
+  const [userId, setUserId] = useState('');
+  const [userEmail, setUserEmail] = useState('');
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [testInput, setTestInput] = useState('');
   const [testOutput, setTestOutput] = useState('');
+  const [allTestsPassed, setAllTestsPassed] = useState(false);
+  const [testingAllCases, setTestingAllCases] = useState(false);
+  const [timeUntilStart, setTimeUntilStart] = useState<string>('');
 
   useEffect(() => {
     params.then(({ id }) => {
       setContestId(id);
-      const name = localStorage.getItem('userName');
-      if (!name) {
-        router.push('/');
+      const user = getAuthToken();
+      if (!user) {
+        router.push('/login');
         return;
       }
-      setUserName(name);
+      setUserId(user.id);
+      setUserEmail(user.email);
     });
   }, []);
 
@@ -44,6 +50,40 @@ export default function ContestPage({ params }: { params: Promise<{ id: string }
     }
   }, [selectedProblem]);
 
+  // Countdown timer for contest start
+  useEffect(() => {
+    if (!contest) return;
+
+    const updateCountdown = () => {
+      const now = new Date();
+      const start = new Date(contest.startTime);
+      const diff = start.getTime() - now.getTime();
+
+      if (diff <= 0) {
+        setTimeUntilStart('');
+        return;
+      }
+
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+      let countdown = '';
+      if (days > 0) countdown += `${days}d `;
+      if (hours > 0) countdown += `${hours}h `;
+      if (minutes > 0) countdown += `${minutes}m `;
+      countdown += `${seconds}s`;
+
+      setTimeUntilStart(countdown);
+    };
+
+    updateCountdown();
+    const interval = setInterval(updateCountdown, 1000);
+
+    return () => clearInterval(interval);
+  }, [contest]);
+
   const fetchContest = async () => {
     const response = await fetch(`/api/contests/${contestId}`);
     const data = await response.json();
@@ -54,12 +94,21 @@ export default function ContestPage({ params }: { params: Promise<{ id: string }
   };
 
   const fetchSubmissions = async () => {
-    if (!selectedProblem || !contestId) return;
+    if (!selectedProblem || !contestId || !userId) return;
     const response = await fetch(
-      `/api/submissions?contestId=${contestId}&userName=${userName}`
+      `/api/submissions?contestId=${contestId}&userId=${userId}`
     );
     const data = await response.json();
-    setSubmissions(data.filter((s: Submission) => s.problemId === selectedProblem.id));
+    const problemSubs = data.filter((s: Submission) => s.problemId === selectedProblem.id);
+    setSubmissions(problemSubs);
+    
+    // Check if all tests passed in the latest submission
+    if (problemSubs.length > 0) {
+      const latest = problemSubs[problemSubs.length - 1];
+      setAllTestsPassed(latest.status === 'accepted' && latest.passedTestCases === latest.totalTestCases);
+    } else {
+      setAllTestsPassed(false);
+    }
   };
 
   const handleSubmit = async () => {
@@ -70,6 +119,7 @@ export default function ContestPage({ params }: { params: Promise<{ id: string }
       return;
     }
 
+    // Submit solution
     const confirmed = confirm(
       `Submit your solution for "${selectedProblem.title}"?\n\n` +
       `Your code will be tested against ${selectedProblem.testCases.length} test cases.\n` +
@@ -81,7 +131,7 @@ export default function ContestPage({ params }: { params: Promise<{ id: string }
     const submission = {
       contestId: contestId,
       problemId: selectedProblem.id,
-      userName,
+      userId,
       code,
       language,
     };
@@ -107,6 +157,97 @@ export default function ContestPage({ params }: { params: Promise<{ id: string }
     } else {
       const error = await response.json();
       alert(`Submission failed: ${error.error || 'Unknown error'}`);
+    }
+  };
+
+  const handleTestAllCases = async () => {
+    if (!selectedProblem || !code.trim()) {
+      alert('Please write some code first!');
+      return;
+    }
+
+    setTestingAllCases(true);
+    setTestOutput('🧪 Testing against all test cases...');
+
+    try {
+      const results = [];
+      let allPassed = true;
+
+      for (let i = 0; i < selectedProblem.testCases.length; i++) {
+        const testCase = selectedProblem.testCases[i];
+        let result;
+
+        // Try browser execution first for JS/Python
+        if (language === 'javascript' || language === 'python') {
+          try {
+            const { executeInBrowser } = await import('@/lib/clientExecution');
+            result = await executeInBrowser(code, language, testCase.input);
+          } catch (error) {
+            // Fall back to API
+            const response = await fetch('/api/execute', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ code, language, input: testCase.input }),
+            });
+            result = await response.json();
+          }
+        } else {
+          // Use API for compiled languages
+          const response = await fetch('/api/execute', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ code, language, input: testCase.input }),
+          });
+          result = await response.json();
+        }
+
+        const passed = !result.error && result.output?.trim() === testCase.expectedOutput.trim();
+        results.push({
+          testCase: i + 1,
+          passed,
+          expected: testCase.expectedOutput,
+          actual: result.output || '',
+          error: result.error
+        });
+
+        if (!passed) allPassed = false;
+      }
+
+      // Update test status
+      setAllTestsPassed(allPassed);
+
+      // Display results
+      const passedCount = results.filter(r => r.passed).length;
+      const totalCount = results.length;
+      
+      let output = `Test Results: ${passedCount}/${totalCount} passed\n\n`;
+      
+      results.forEach((r, idx) => {
+        if (r.passed) {
+          output += `✅ Test Case ${r.testCase}: PASSED\n`;
+        } else {
+          output += `❌ Test Case ${r.testCase}: FAILED\n`;
+          if (r.error) {
+            output += `   Error: ${r.error}\n`;
+          } else {
+            output += `   Expected: ${r.expected}\n`;
+            output += `   Got: ${r.actual}\n`;
+          }
+        }
+      });
+
+      if (allPassed) {
+        output += `\n🎉 All test cases passed! You can now submit.`;
+      } else {
+        output += `\n⚠️ Some test cases failed. Fix your code and test again.`;
+      }
+
+      setTestOutput(output);
+    } catch (error: any) {
+      setTestOutput(`❌ Testing Error: ${error.message}`);
+      setAllTestsPassed(false);
+    } finally {
+      setTestingAllCases(false);
     }
   };
 
@@ -220,16 +361,114 @@ int main() {
     );
   }
 
+  // Check if contest has ended
+  if (new Date() > new Date(contest.endTime)) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-2xl p-12 max-w-2xl w-full text-center">
+          <div className="mb-6">
+            <div className="inline-block p-6 bg-red-100 rounded-full mb-4">
+              <svg className="w-20 h-20 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <h1 className="text-4xl font-bold text-gray-800 mb-3">{contest.title}</h1>
+            <p className="text-2xl text-red-600 font-semibold mb-6">Contest Has Ended</p>
+            <div className="bg-gray-50 rounded-xl p-6 mb-6">
+              <p className="text-gray-600 mb-2">Contest ended at:</p>
+              <p className="text-xl font-semibold text-gray-800">
+                {new Date(contest.endTime).toLocaleString('en-US', {
+                  dateStyle: 'full',
+                  timeStyle: 'long'
+                })}
+              </p>
+            </div>
+            <div className="flex gap-4 justify-center">
+              <Link 
+                href={`/contest/${contestId}/leaderboard`}
+                className="bg-primary-600 text-white px-8 py-3 rounded-lg hover:bg-primary-700 transition-colors font-semibold"
+              >
+                View Leaderboard
+              </Link>
+              <Link 
+                href="/join"
+                className="bg-gray-600 text-white px-8 py-3 rounded-lg hover:bg-gray-700 transition-colors font-semibold"
+              >
+                Back to Contests
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Check if contest hasn't started yet
+  if (new Date() < new Date(contest.startTime)) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-2xl p-12 max-w-2xl w-full text-center">
+          <div className="mb-6">
+            <div className="inline-block p-6 bg-blue-100 rounded-full mb-4 animate-pulse">
+              <svg className="w-20 h-20 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <h1 className="text-4xl font-bold text-gray-800 mb-3">{contest.title}</h1>
+            <p className="text-2xl text-blue-600 font-semibold mb-6">Contest Starts Soon!</p>
+            <div className="bg-blue-50 rounded-xl p-8 mb-6">
+              <p className="text-gray-600 mb-4 text-lg">Contest begins in:</p>
+              <div className="text-5xl font-bold text-blue-600 mb-6 font-mono">
+                {timeUntilStart || 'Starting...'}
+              </div>
+              <div className="border-t-2 border-blue-200 pt-6 mt-6">
+                <p className="text-gray-600 mb-2">Start time:</p>
+                <p className="text-xl font-semibold text-gray-800">
+                  {new Date(contest.startTime).toLocaleString('en-US', {
+                    dateStyle: 'full',
+                    timeStyle: 'long'
+                  })}
+                </p>
+              </div>
+            </div>
+            <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6">
+              <p className="text-yellow-800 text-sm">
+                <span className="font-semibold">📌 Tip:</span> Stay on this page. You'll be automatically redirected when the contest starts!
+              </p>
+            </div>
+            <Link 
+              href="/join"
+              className="bg-gray-600 text-white px-8 py-3 rounded-lg hover:bg-gray-700 transition-colors font-semibold inline-block"
+            >
+              Back to Contests
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       <nav className="bg-white shadow-lg">
         <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <Link href="/contests" className="text-xl font-bold text-primary-600">
+            <Link href="/join" className="text-xl font-bold text-primary-600">
               {contest.title}
             </Link>
             <div className="flex items-center gap-4">
-              <span className="text-gray-700">Welcome, {userName}</span>
+              {contest && (
+                <div className="text-sm">
+                  {isContestActive(contest.startTime, contest.endTime) ? (
+                    <span className="text-green-600 font-semibold">⏰ {getTimeRemaining(contest.endTime)} remaining</span>
+                  ) : hasContestEnded(contest.endTime) ? (
+                    <span className="text-gray-500">Contest Ended</span>
+                  ) : (
+                    <span className="text-blue-600">Starts: {new Date(contest.startTime).toLocaleString()}</span>
+                  )}
+                </div>
+              )}
+              <span className="text-gray-700">{userEmail}</span>
               <Link
                 href={`/contest/${contestId}/leaderboard`}
                 className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700"
@@ -382,10 +621,25 @@ int main() {
                 Run Code
               </button>
               <button
-                onClick={handleSubmit}
-                className="bg-primary-600 text-white px-6 py-2 rounded-lg hover:bg-primary-700"
+                onClick={handleTestAllCases}
+                disabled={testingAllCases}
+                className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
               >
-                Submit
+                {testingAllCases ? 'Testing...' : 'Test All Cases'}
+              </button>
+              <button
+                onClick={handleSubmit}
+                disabled={!allTestsPassed || !contest || !isContestActive(contest.startTime, contest.endTime)}
+                className="bg-primary-600 text-white px-6 py-2 rounded-lg hover:bg-primary-700 disabled:bg-gray-400 disabled:cursor-not-allowed font-semibold"
+                title={
+                  !allTestsPassed
+                    ? 'Click "Test All Cases" first and pass all tests'
+                    : !contest || !isContestActive(contest.startTime, contest.endTime)
+                    ? 'Contest is not active'
+                    : 'Submit your solution'
+                }
+              >
+                Submit {!allTestsPassed && '(Test all first)'}
               </button>
             </div>
           </div>

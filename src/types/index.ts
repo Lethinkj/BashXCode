@@ -25,6 +25,38 @@ export interface RegisterData {
   fullName: string;
 }
 
+// Admin types
+export interface AdminUser {
+  id: string;
+  email: string;
+  fullName: string;
+  isSuperAdmin: boolean;
+  isActive: boolean;
+  createdAt?: string;
+  lastLogin?: string;
+}
+
+export interface AdminLoginCredentials {
+  email: string;
+  password: string;
+}
+
+export interface CreateAdminData {
+  email: string;
+  password: string;
+  fullName: string;
+  isSuperAdmin?: boolean;
+}
+
+export interface PasswordResetRequest {
+  email: string;
+}
+
+export interface PasswordResetComplete {
+  token: string;
+  newPassword: string;
+}
+
 // Contest types
 export interface TestCase {
   id: string;

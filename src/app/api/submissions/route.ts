@@ -7,7 +7,7 @@ import { executeCodeWithTestCases } from '@/lib/codeExecution';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { contestId, problemId, userName, code, language } = body;
+    const { contestId, problemId, userId, code, language } = body;
     
     // Get contest and problem
     const contest = await contestStorage.getById(contestId);
@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
       id: uuidv4(),
       contestId,
       problemId,
-      userName,
+      userId,
       code,
       language,
       status: 'running',
@@ -82,10 +82,10 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const contestId = searchParams.get('contestId');
-    const userName = searchParams.get('userName');
+    const userId = searchParams.get('userId');
     
-    if (contestId && userName) {
-      const submissions = await submissionStorage.getByUserAndContest(userName, contestId);
+    if (contestId && userId) {
+      const submissions = await submissionStorage.getByUserAndContest(userId, contestId);
       return NextResponse.json(submissions);
     } else if (contestId) {
       const submissions = await submissionStorage.getByContestId(contestId);

@@ -104,7 +104,7 @@ export default function LeaderboardPage({ params }: { params: Promise<{ id: stri
                 <tbody className="bg-white divide-y divide-gray-200">
                   {leaderboard.map((entry, index) => (
                     <tr 
-                      key={entry.userName}
+                      key={entry.userId}
                       className={`hover:bg-gray-50 ${
                         index === 0 ? 'bg-yellow-50' :
                         index === 1 ? 'bg-gray-50' :
@@ -120,7 +120,8 @@ export default function LeaderboardPage({ params }: { params: Promise<{ id: stri
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-lg font-semibold text-gray-900">{entry.userName}</div>
+                        <div className="text-lg font-semibold text-gray-900">{entry.fullName}</div>
+                        <div className="text-sm text-gray-500">{entry.email}</div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-xl font-bold text-primary-600">{entry.totalPoints}</div>
