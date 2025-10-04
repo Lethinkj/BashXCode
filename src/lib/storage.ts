@@ -16,9 +16,12 @@ export const contestStorage = {
       id: row.id,
       title: row.title,
       description: row.description,
+      contestCode: row.contest_code,
       startTime: row.start_time,
       endTime: row.end_time,
+      status: row.status as Contest['status'],
       problems: typeof row.problems === 'string' ? JSON.parse(row.problems) : row.problems,
+      createdBy: row.created_by || 'admin',
       createdAt: row.created_at
     }));
   },
@@ -35,23 +38,50 @@ export const contestStorage = {
       id: row.id,
       title: row.title,
       description: row.description,
+      contestCode: row.contest_code,
       startTime: row.start_time,
       endTime: row.end_time,
+      status: row.status as Contest['status'],
       problems: typeof row.problems === 'string' ? JSON.parse(row.problems) : row.problems,
+      createdBy: row.created_by || 'admin',
       createdAt: row.created_at
     };
+  },
+
+  getUserContests: async (userId: string): Promise<Contest[]> => {
+    const rows = await sql`
+      SELECT c.* FROM contests c
+      INNER JOIN contest_participants cp ON c.id = cp.contest_id
+      WHERE cp.user_id = ${userId}
+      ORDER BY c.created_at DESC
+    `;
+    return rows.map(row => ({
+      id: row.id,
+      title: row.title,
+      description: row.description,
+      contestCode: row.contest_code,
+      startTime: row.start_time,
+      endTime: row.end_time,
+      status: row.status as Contest['status'],
+      problems: typeof row.problems === 'string' ? JSON.parse(row.problems) : row.problems,
+      createdBy: row.created_by || 'admin',
+      createdAt: row.created_at
+    }));
   },
   
   create: async (contest: Contest): Promise<Contest> => {
     await sql`
-      INSERT INTO contests (id, title, description, start_time, end_time, problems, created_at)
+      INSERT INTO contests (id, title, description, contest_code, start_time, end_time, status, problems, created_by, created_at)
       VALUES (
         ${contest.id}, 
         ${contest.title}, 
         ${contest.description}, 
+        ${contest.contestCode},
         ${contest.startTime}, 
         ${contest.endTime}, 
+        ${contest.status},
         ${JSON.stringify(contest.problems)}, 
+        ${contest.createdBy},
         ${contest.createdAt}
       )
     `;
@@ -68,8 +98,10 @@ export const contestStorage = {
       SET 
         title = ${updated.title},
         description = ${updated.description},
+        contest_code = ${updated.contestCode},
         start_time = ${updated.startTime},
         end_time = ${updated.endTime},
+        status = ${updated.status},
         problems = ${JSON.stringify(updated.problems)}
       WHERE id = ${id}
     `;
@@ -81,7 +113,7 @@ export const contestStorage = {
       DELETE FROM contests 
       WHERE id = ${id}
     `;
-    return result.length > 0;
+    return result.count > 0;
   }
 };
 
@@ -95,7 +127,7 @@ export const submissionStorage = {
       id: row.id,
       contestId: row.contest_id,
       problemId: row.problem_id,
-      userName: row.user_name,
+      userId: row.user_id,
       code: row.code,
       language: row.language,
       status: row.status as Submission['status'],
@@ -117,7 +149,7 @@ export const submissionStorage = {
       id: row.id,
       contestId: row.contest_id,
       problemId: row.problem_id,
-      userName: row.user_name,
+      userId: row.user_id,
       code: row.code,
       language: row.language,
       status: row.status as Submission['status'],
@@ -129,17 +161,17 @@ export const submissionStorage = {
     }));
   },
   
-  getByUserAndContest: async (userName: string, contestId: string): Promise<Submission[]> => {
+  getByUserAndContest: async (userId: string, contestId: string): Promise<Submission[]> => {
     const rows = await sql`
       SELECT * FROM submissions 
-      WHERE user_name = ${userName} AND contest_id = ${contestId}
+      WHERE user_id = ${userId} AND contest_id = ${contestId}
       ORDER BY submitted_at DESC
     `;
     return rows.map(row => ({
       id: row.id,
       contestId: row.contest_id,
       problemId: row.problem_id,
-      userName: row.user_name,
+      userId: row.user_id,
       code: row.code,
       language: row.language,
       status: row.status as Submission['status'],
@@ -154,7 +186,7 @@ export const submissionStorage = {
   create: async (submission: Submission): Promise<Submission> => {
     await sql`
       INSERT INTO submissions (
-        id, contest_id, problem_id, user_name, code, language, 
+        id, contest_id, problem_id, user_id, code, language, 
         status, passed_test_cases, total_test_cases, points, 
         execution_time, submitted_at
       )
@@ -162,7 +194,7 @@ export const submissionStorage = {
         ${submission.id}, 
         ${submission.contestId}, 
         ${submission.problemId}, 
-        ${submission.userName}, 
+        ${submission.userId}, 
         ${submission.code}, 
         ${submission.language}, 
         ${submission.status}, 
@@ -205,7 +237,7 @@ export const submissionStorage = {
       id: existing.id,
       contestId: existing.contest_id,
       problemId: existing.problem_id,
-      userName: existing.user_name,
+      userId: existing.user_id,
       code: existing.code,
       language: existing.language,
       status: updated.status as Submission['status'],
@@ -222,35 +254,40 @@ export const leaderboardService = {
   getLeaderboard: async (contestId: string): Promise<LeaderboardEntry[]> => {
     const rows = await sql`
       WITH best_submissions AS (
-        SELECT DISTINCT ON (user_name, problem_id)
-          user_name,
+        SELECT DISTINCT ON (user_id, problem_id)
+          user_id,
           problem_id,
           points,
           submitted_at
         FROM submissions
         WHERE contest_id = ${contestId} 
           AND status = 'accepted'
-        ORDER BY user_name, problem_id, submitted_at ASC
+        ORDER BY user_id, problem_id, submitted_at ASC
       )
       SELECT 
-        user_name,
-        SUM(points) as total_points,
-        COUNT(DISTINCT problem_id) as solved_problems,
-        MAX(submitted_at) as last_submission_time,
+        bs.user_id,
+        u.email,
+        u.full_name,
+        SUM(bs.points) as total_points,
+        COUNT(DISTINCT bs.problem_id) as solved_problems,
+        MAX(bs.submitted_at) as last_submission_time,
         json_agg(
           json_build_object(
-            'problemId', problem_id,
-            'points', points,
-            'time', submitted_at
+            'problemId', bs.problem_id,
+            'points', bs.points,
+            'time', bs.submitted_at
           )
         ) as submissions
-      FROM best_submissions
-      GROUP BY user_name
+      FROM best_submissions bs
+      JOIN users u ON bs.user_id = u.id
+      GROUP BY bs.user_id, u.email, u.full_name
       ORDER BY total_points DESC, last_submission_time ASC
     `;
     
     return rows.map(row => ({
-      userName: row.user_name,
+      userId: row.user_id,
+      email: row.email,
+      fullName: row.full_name,
       totalPoints: parseInt(row.total_points),
       solvedProblems: parseInt(row.solved_problems),
       lastSubmissionTime: row.last_submission_time,

@@ -1,3 +1,30 @@
+// User types
+export interface User {
+  id: string;
+  email: string;
+  fullName: string;
+  createdAt: string;
+  lastLogin?: string;
+  isActive: boolean;
+}
+
+export interface AuthUser {
+  id: string;
+  email: string;
+  fullName: string;
+}
+
+export interface LoginCredentials {
+  email: string;
+  password: string;
+}
+
+export interface RegisterData {
+  email: string;
+  password: string;
+  fullName: string;
+}
+
 // Contest types
 export interface TestCase {
   id: string;
@@ -21,17 +48,27 @@ export interface Contest {
   id: string;
   title: string;
   description: string;
+  contestCode: string; // NEW: Join code
   startTime: string;
   endTime: string;
+  status: 'upcoming' | 'active' | 'ended'; // NEW
   problems: Problem[];
+  createdBy: string;
   createdAt: string;
+}
+
+export interface ContestParticipant {
+  id: string;
+  contestId: string;
+  userId: string;
+  joinedAt: string;
 }
 
 export interface Submission {
   id: string;
   contestId: string;
   problemId: string;
-  userName: string;
+  userId: string; // CHANGED: from userName to userId
   code: string;
   language: string;
   status: 'pending' | 'running' | 'accepted' | 'wrong_answer' | 'time_limit' | 'runtime_error' | 'compile_error' | 'compilation_error' | 'error';
@@ -44,7 +81,9 @@ export interface Submission {
 }
 
 export interface LeaderboardEntry {
-  userName: string;
+  userId: string;
+  email: string;
+  fullName: string;
   totalPoints: number;
   solvedProblems: number;
   lastSubmissionTime: string;
