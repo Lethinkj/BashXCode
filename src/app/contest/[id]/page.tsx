@@ -25,6 +25,34 @@ export default function ContestPage({ params }: { params: Promise<{ id: string }
   const [testingAllCases, setTestingAllCases] = useState(false);
   const [timeUntilStart, setTimeUntilStart] = useState<string>('');
 
+  // Define fetch functions before useEffect hooks
+  const fetchContest = useCallback(async () => {
+    const response = await fetch(`/api/contests/${contestId}`);
+    const data = await response.json();
+    setContest(data);
+    if (data.problems.length > 0) {
+      setSelectedProblem(data.problems[0]);
+    }
+  }, [contestId]);
+
+  const fetchSubmissions = useCallback(async () => {
+    if (!selectedProblem || !contestId || !userId) return;
+    const response = await fetch(
+      `/api/submissions?contestId=${contestId}&userId=${userId}`
+    );
+    const data = await response.json();
+    const problemSubs = data.filter((s: Submission) => s.problemId === selectedProblem.id);
+    setSubmissions(problemSubs);
+    
+    // Check if all tests passed in the latest submission
+    if (problemSubs.length > 0) {
+      const latest = problemSubs[problemSubs.length - 1];
+      setAllTestsPassed(latest.status === 'accepted' && latest.passedTestCases === latest.totalTestCases);
+    } else {
+      setAllTestsPassed(false);
+    }
+  }, [selectedProblem, contestId, userId]);
+
   useEffect(() => {
     params.then(({ id }) => {
       setContestId(id);
@@ -83,33 +111,6 @@ export default function ContestPage({ params }: { params: Promise<{ id: string }
 
     return () => clearInterval(interval);
   }, [contest]);
-
-  const fetchContest = useCallback(async () => {
-    const response = await fetch(`/api/contests/${contestId}`);
-    const data = await response.json();
-    setContest(data);
-    if (data.problems.length > 0) {
-      setSelectedProblem(data.problems[0]);
-    }
-  }, [contestId]);
-
-  const fetchSubmissions = useCallback(async () => {
-    if (!selectedProblem || !contestId || !userId) return;
-    const response = await fetch(
-      `/api/submissions?contestId=${contestId}&userId=${userId}`
-    );
-    const data = await response.json();
-    const problemSubs = data.filter((s: Submission) => s.problemId === selectedProblem.id);
-    setSubmissions(problemSubs);
-    
-    // Check if all tests passed in the latest submission
-    if (problemSubs.length > 0) {
-      const latest = problemSubs[problemSubs.length - 1];
-      setAllTestsPassed(latest.status === 'accepted' && latest.passedTestCases === latest.totalTestCases);
-    } else {
-      setAllTestsPassed(false);
-    }
-  }, [selectedProblem, contestId, userId]);
 
   const handleSubmit = async () => {
     if (!selectedProblem || !contestId) return;
