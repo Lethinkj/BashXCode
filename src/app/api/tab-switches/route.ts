@@ -18,6 +18,7 @@ export async function GET(request: NextRequest) {
       SELECT 
         user_id as "userId",
         user_email as "userEmail",
+        COALESCE(user_name, user_email) as "userName",
         switch_count as "switchCount",
         last_switch_time as "lastSwitchTime"
       FROM tab_switches

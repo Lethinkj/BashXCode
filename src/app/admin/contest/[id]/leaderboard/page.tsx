@@ -133,7 +133,7 @@ export default function AdminLeaderboardPage({ params }: { params: Promise<{ id:
       )}
 
       {/* Tab Switch Alerts Banner - Presentation Mode */}
-      {presentationMode && tabSwitches.filter(ts => ts.switchCount > 0).length > 0 && (
+      {presentationMode && Array.isArray(tabSwitches) && tabSwitches.filter(ts => ts.switchCount > 0).length > 0 && (
         <div className="fixed top-4 left-4 right-24 z-40 bg-red-500 text-white px-6 py-4 rounded-lg shadow-2xl border-4 border-red-600">
           <h3 className="text-2xl font-bold mb-2">⚠️ TAB SWITCH ALERTS</h3>
           <div className="space-y-2">
@@ -188,7 +188,7 @@ export default function AdminLeaderboardPage({ params }: { params: Promise<{ id:
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {leaderboard.map((entry, index) => {
-                    const tabSwitchLog = tabSwitches.find(ts => ts.userId === entry.userId);
+                    const tabSwitchLog = Array.isArray(tabSwitches) ? tabSwitches.find(ts => ts.userId === entry.userId) : null;
                     return (
                       <tr 
                         key={entry.userId}
@@ -273,14 +273,14 @@ export default function AdminLeaderboardPage({ params }: { params: Promise<{ id:
             <div className="bg-white/95 backdrop-blur-sm rounded-lg shadow-xl p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-2">⚠️ Tab Switches</h3>
               <p className="text-3xl font-bold text-red-600">
-                {tabSwitches.reduce((sum, ts) => sum + ts.switchCount, 0)}
+                {Array.isArray(tabSwitches) ? tabSwitches.reduce((sum, ts) => sum + ts.switchCount, 0) : 0}
               </p>
             </div>
           </div>
         )}
 
         {/* Tab Switch Alerts */}
-        {!presentationMode && tabSwitches.filter(ts => ts.switchCount > 0).length > 0 && (
+        {!presentationMode && Array.isArray(tabSwitches) && tabSwitches.filter(ts => ts.switchCount > 0).length > 0 && (
           <div className="mt-8 bg-red-50 border border-red-200 rounded-lg p-6">
             <h3 className="text-xl font-bold text-red-900 mb-4">⚠️ Tab Switch Alerts</h3>
             <div className="space-y-2">
