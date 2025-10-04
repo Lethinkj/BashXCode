@@ -159,6 +159,11 @@ code {
   background-clip: text;
 }
 
+/* Dark theme for Monaco Editor */
+.monaco-editor.vs-dark {
+  background-color: #0a0a0f !important;
+}
+
 /* Responsive utilities */
 @media (max-width: 768px) {
   body {

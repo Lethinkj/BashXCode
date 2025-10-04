@@ -11,18 +11,19 @@ const PISTON_LANGUAGES: Record<string, string> = {
 };
 
 /**
- * HYBRID CODE EXECUTION SYSTEM
+ * FULL API MODE CODE EXECUTION SYSTEM
  * 
  * Strategy:
- * 1. JavaScript → Run in browser (client-side, instant)
- * 2. Python → Run in browser using Pyodide WASM (client-side, instant)
- * 3. C/C++/Java → Use Piston API (server-side, free unlimited)
+ * - All languages use Piston API (Python, JavaScript, C, C++, Java)
+ * - Consistent execution environment for all users
+ * - Reliable test case checking
+ * - No browser compatibility issues
  * 
  * Benefits:
- * - ~70% of tests run instantly (no API calls)
+ * - Consistent results across all languages
  * - Free unlimited execution (Piston has no daily limits)
- * - Better user experience (instant feedback)
  * - Handles 100+ concurrent users easily
+ * - Better for leaderboard accuracy
  */
 export async function executeCode(
   request: CodeExecutionRequest
@@ -30,13 +31,7 @@ export async function executeCode(
   const startTime = Date.now();
   
   try {
-    // Compiled languages need Piston API
-    if (request.language === 'c' || request.language === 'cpp' || request.language === 'java') {
-      return await executePistonAPI(request, startTime);
-    }
-    
-    // JavaScript and Python should be handled client-side
-    // This server function is a fallback for server-side execution
+    // Use Piston API for all languages
     return await executePistonAPI(request, startTime);
     
   } catch (error: any) {

@@ -177,31 +177,14 @@ export default function ContestPage({ params }: { params: Promise<{ id: string }
 
       for (let i = 0; i < selectedProblem.testCases.length; i++) {
         const testCase = selectedProblem.testCases[i];
-        let result;
-
-        // Try browser execution first for JS/Python
-        if (language === 'javascript' || language === 'python') {
-          try {
-            const { executeInBrowser } = await import('@/lib/clientExecution');
-            result = await executeInBrowser(code, language, testCase.input);
-          } catch (error) {
-            // Fall back to API
-            const response = await fetch('/api/execute', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ code, language, input: testCase.input }),
-            });
-            result = await response.json();
-          }
-        } else {
-          // Use API for compiled languages
-          const response = await fetch('/api/execute', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ code, language, input: testCase.input }),
-          });
-          result = await response.json();
-        }
+        
+        // Use API for all languages (full API mode for consistency)
+        const response = await fetch('/api/execute', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code, language, input: testCase.input }),
+        });
+        const result = await response.json();
 
         const passed = !result.error && result.output?.trim() === testCase.expectedOutput.trim();
         results.push({

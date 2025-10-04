@@ -20,7 +20,7 @@ export default function LeaderboardPage({ params }: { params: Promise<{ id: stri
   useEffect(() => {
     if (!contestId) return;
     fetchData();
-    const interval = setInterval(fetchData, 10000); // Refresh every 10 seconds
+    const interval = setInterval(fetchData, 5000); // Refresh every 5 seconds for faster updates
     return () => clearInterval(interval);
   }, [contestId]);
 
