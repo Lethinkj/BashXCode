@@ -506,7 +506,7 @@ int main() {
         <div className="w-64 bg-white/95 backdrop-blur-sm shadow-lg overflow-y-auto border-r border-gray-200">
           <div className="p-4">
             <h3 className="font-bold text-lg mb-4 text-gray-900">📝 Problems</h3>
-            {contest.problems.map((problem) => {
+            {contest && Array.isArray(contest.problems) && contest.problems.map((problem) => {
               const userSubmissions = submissions.filter(s => s.problemId === problem.id);
               const solved = userSubmissions.some(s => s.status === 'accepted');
               

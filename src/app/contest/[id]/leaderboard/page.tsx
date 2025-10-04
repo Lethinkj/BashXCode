@@ -130,7 +130,7 @@ export default function LeaderboardPage({ params }: { params: Promise<{ id: stri
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-lg text-gray-900">
-                          {entry.solvedProblems} / {contest?.problems.length || 0}
+                          {entry.solvedProblems} / {(contest && Array.isArray(contest.problems)) ? contest.problems.length : 0}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -144,7 +144,7 @@ export default function LeaderboardPage({ params }: { params: Promise<{ id: stri
           )}
         </div>
 
-        {contest && (
+        {contest && Array.isArray(contest.problems) && (
           <div className="mt-8 grid md:grid-cols-3 gap-6">
             <div className="bg-white/95 backdrop-blur-sm rounded-lg shadow-xl p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-2">👥 Total Participants</h3>

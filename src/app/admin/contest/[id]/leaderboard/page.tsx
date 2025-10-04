@@ -254,7 +254,7 @@ export default function AdminLeaderboardPage({ params }: { params: Promise<{ id:
         </div>
 
         {/* Statistics Cards - Hide in presentation mode */}
-        {!presentationMode && contest && (
+        {!presentationMode && contest && Array.isArray(contest.problems) && (
           <div className="mt-8 grid md:grid-cols-4 gap-6">
             <div className="bg-white/95 backdrop-blur-sm rounded-lg shadow-xl p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-2">👥 Total Participants</h3>
