@@ -116,7 +116,29 @@ export default function ContestPage({ params }: { params: Promise<{ id: string }
       return;
     }
 
-    setTestOutput('Running code...');
+    // Try client-side execution first (instant for JS/Python)
+    if (language === 'javascript' || language === 'python') {
+      setTestOutput('⚡ Running in browser...');
+      
+      try {
+        const { executeInBrowser } = await import('@/lib/clientExecution');
+        const result = await executeInBrowser(code, language, testInput);
+        
+        if (result) {
+          if (result.error) {
+            setTestOutput(`❌ Error:\n${result.error}\n\n⚡ Execution Time: ${result.executionTime}ms (Browser)`);
+          } else {
+            setTestOutput(`✅ Success:\n${result.output}\n\n⚡ Execution Time: ${result.executionTime}ms (Browser)`);
+          }
+          return;
+        }
+      } catch (error: any) {
+        console.error('Browser execution failed, falling back to API:', error);
+      }
+    }
+
+    // Fall back to API for compiled languages or if browser execution fails
+    setTestOutput('🌐 Running via API...');
 
     try {
       const response = await fetch('/api/execute', {
@@ -128,9 +150,9 @@ export default function ContestPage({ params }: { params: Promise<{ id: string }
       const result = await response.json();
       
       if (result.error) {
-        setTestOutput(`❌ Error:\n${result.error}\n\nExecution Time: ${result.executionTime}ms`);
+        setTestOutput(`❌ Error:\n${result.error}\n\n🌐 Execution Time: ${result.executionTime}ms (API)`);
       } else {
-        setTestOutput(`✅ Success:\n${result.output}\n\nExecution Time: ${result.executionTime}ms`);
+        setTestOutput(`✅ Success:\n${result.output}\n\n🌐 Execution Time: ${result.executionTime}ms (API)`);
       }
     } catch (error: any) {
       setTestOutput(`❌ Network Error:\n${error.message || 'Failed to execute code'}`);
@@ -336,17 +358,22 @@ int main() {
         {/* Code Editor */}
         <div className="flex-1 flex flex-col">
           <div className="bg-white border-b p-4 flex justify-between items-center">
-            <select
-              value={language}
-              onChange={(e) => setLanguage(e.target.value)}
-              className="px-4 py-2 border rounded-lg text-gray-900"
-            >
-              <option value="python">Python</option>
-              <option value="javascript">JavaScript</option>
-              <option value="java">Java</option>
-              <option value="cpp">C++</option>
-              <option value="c">C</option>
-            </select>
+            <div className="flex items-center gap-3">
+              <select
+                value={language}
+                onChange={(e) => setLanguage(e.target.value)}
+                className="px-4 py-2 border rounded-lg text-gray-900"
+              >
+                <option value="python">Python</option>
+                <option value="javascript">JavaScript</option>
+                <option value="java">Java</option>
+                <option value="cpp">C++</option>
+                <option value="c">C</option>
+              </select>
+              <span className="text-sm text-gray-600 px-3 py-1 bg-gray-100 rounded-full">
+                {language === 'javascript' || language === 'python' ? '⚡ Instant' : '🌐 API'}
+              </span>
+            </div>
             <div className="flex gap-2">
               <button
                 onClick={handleRunCode}

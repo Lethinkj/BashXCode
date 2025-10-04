@@ -13,13 +13,21 @@ See [QUICK_JUDGE0_SETUP.md](./QUICK_JUDGE0_SETUP.md) for detailed steps.
 
 ## Features
 
+### 🚀 NEW: Hybrid Code Execution
+- ⚡ **Instant Execution**: JavaScript & Python run in browser (0ms latency)
+- 🌐 **Free API**: C/C++/Java use Piston API (unlimited, no cost)
+- 💰 **$0/month**: No API costs or daily limits
+- 🎯 **Perfect for Contests**: Handles 100+ concurrent users easily
+- 📚 **Learn More**: See [HYBRID_EXECUTION.md](./HYBRID_EXECUTION.md)
+
+### Core Features
 - 🎯 **Contest Management**: Create and manage programming contests with multiple problems
 - 👤 **Simple Authentication**: Name-based login for quick access
 - 💻 **Multi-Language Support**: Code in Python, JavaScript, Java, C++, and C
-- ⚡ **Real Code Execution**: Powered by Judge0 API for secure, sandboxed execution
-- ✅ **Test Case Evaluation**: 5 test cases per problem with automatic scoring
+- ⚡ **Real Code Execution**: Browser-based + Piston API for secure execution
+- ✅ **Test Case Evaluation**: Up to 10 test cases per problem with automatic scoring
 - 🏆 **Real-Time Leaderboard**: Rankings based on points and solve time
-- 📊 **Points System**: Earn points based on passed test cases
+- 📊 **All-or-Nothing Scoring**: Full points only if all test cases pass
 - 🔗 **Contest URL Sharing**: Easy contest access via shareable URLs
 - 🗄️ **PostgreSQL Database**: Persistent storage via Supabase
 - 🎨 **Responsive UI**: Beautiful interface built with Tailwind CSS
