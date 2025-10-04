@@ -74,17 +74,24 @@ type SubmissionStatus =
 
 ## 🏆 Leaderboard Ranking System
 
+### **Visibility**
+✅ **ALL participants are visible** on the leaderboard, including:
+- Participants with points (solved problems)
+- Participants with 0 points (no solved problems yet)
+- Everyone who joined the contest appears in the ranking
+
 ### **Ranking Algorithm (Priority Order)**
 ```
 1. Total Points (Highest first) ⭐
 2. Problems Solved (Most first) 🎯
 3. Time to First Solve (Fastest first) ⚡
+4. No submissions appear last (NULLS LAST)
 ```
 
 ### **Leaderboard Calculation**
 ```sql
 WITH best_submissions AS (
-  -- Get first accepted submission for each problem
+  -- Get first accepted submission for each problem per user
   SELECT DISTINCT ON (user_id, problem_id)
     user_id,
     problem_id,
@@ -94,19 +101,35 @@ WITH best_submissions AS (
   WHERE contest_id = ${contestId} 
     AND status = 'accepted'
   ORDER BY user_id, problem_id, submitted_at ASC
+),
+participant_scores AS (
+  -- Calculate scores for participants with accepted submissions
+  SELECT 
+    user_id,
+    SUM(points) as total_points,
+    COUNT(DISTINCT problem_id) as solved_problems,
+    MIN(submitted_at) as first_submission_time
+  FROM best_submissions
+  GROUP BY user_id
 )
 SELECT 
-  user_id,
-  SUM(points) as total_points,
-  COUNT(DISTINCT problem_id) as solved_problems,
-  MIN(submitted_at) as first_submission_time
-FROM best_submissions
-GROUP BY user_id
+  cp.user_id,
+  u.email,
+  u.full_name,
+  COALESCE(ps.total_points, 0) as total_points,
+  COALESCE(ps.solved_problems, 0) as solved_problems,
+  ps.first_submission_time
+FROM contest_participants cp           -- All participants who joined
+JOIN users u ON cp.user_id = u.id
+LEFT JOIN participant_scores ps ON cp.user_id = ps.user_id
+WHERE cp.contest_id = ${contestId}
 ORDER BY 
-  total_points DESC,           -- 1st: Highest points
-  solved_problems DESC,         -- 2nd: Most problems solved
-  first_submission_time ASC     -- 3rd: Fastest first solve
+  COALESCE(ps.total_points, 0) DESC,      -- 1st: Highest points
+  COALESCE(ps.solved_problems, 0) DESC,   -- 2nd: Most problems
+  ps.first_submission_time ASC NULLS LAST -- 3rd: Fastest (0-point users last)
 ```
+
+**Key Feature:** Uses `LEFT JOIN` to include ALL participants, even those with 0 points!
 
 ### **Why This Ranking System?**
 
@@ -209,7 +232,7 @@ Result:
 
 ### **Example 5: Leaderboard Ranking**
 ```
-Contest Results:
+Contest Results (6 participants joined):
 
 Alice:
 - Total Points: 300 (2 problems)
@@ -227,16 +250,25 @@ Dave:
 - Total Points: 400 (2 problems)
 - First Solve: 10:30:00 (30 min)
 
+Eve:
+- Total Points: 0 (still working on problems)
+
+Frank:
+- Total Points: 0 (joined but hasn't submitted yet)
+
 Final Leaderboard:
 🥇 1st: Dave - 400 points (2 solved)
 🥈 2nd: Charlie - 300 points (3 solved) ⭐ Most problems!
 🥉 3rd: Alice - 300 points (2 solved, faster: 5 min)
     4th: Bob - 300 points (2 solved, slower: 8 min)
+    5th: Eve - 0 points (0 solved)
+    6th: Frank - 0 points (0 solved)
 
 Explanation:
 - Dave wins with most points (400 > 300)
 - Charlie beats Alice/Bob: same 300pts but solved 3 problems vs 2
 - Alice beats Bob: same points, same problems, but faster (5min < 8min)
+- Eve and Frank appear on leaderboard even with 0 points ✅
 ```
 
 ---

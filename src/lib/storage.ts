@@ -247,12 +247,6 @@ export const submissionStorage = {
 
 export const leaderboardService = {
   getLeaderboard: async (contestId: string): Promise<LeaderboardEntry[]> => {
-    // Get contest start time for time-to-solve calculation
-    const contestRows = await sql`
-      SELECT start_time FROM contests WHERE id = ${contestId}
-    `;
-    const contestStartTime = contestRows.length > 0 ? contestRows[0].start_time : null;
-
     const rows = await sql`
       WITH best_submissions AS (
         SELECT DISTINCT ON (user_id, problem_id)
@@ -264,34 +258,49 @@ export const leaderboardService = {
         WHERE contest_id = ${contestId} 
           AND status = 'accepted'
         ORDER BY user_id, problem_id, submitted_at ASC
+      ),
+      participant_scores AS (
+        SELECT 
+          bs.user_id,
+          COALESCE(SUM(bs.points), 0) as total_points,
+          COALESCE(COUNT(DISTINCT bs.problem_id), 0) as solved_problems,
+          MAX(bs.submitted_at) as last_submission_time,
+          MIN(bs.submitted_at) as first_submission_time,
+          json_agg(
+            json_build_object(
+              'problemId', bs.problem_id,
+              'points', bs.points,
+              'time', bs.submitted_at
+            ) ORDER BY bs.submitted_at
+          ) FILTER (WHERE bs.problem_id IS NOT NULL) as submissions
+        FROM best_submissions bs
+        GROUP BY bs.user_id
       )
       SELECT 
-        bs.user_id,
+        cp.user_id,
         u.email,
         u.full_name,
-        SUM(bs.points) as total_points,
-        COUNT(DISTINCT bs.problem_id) as solved_problems,
-        MAX(bs.submitted_at) as last_submission_time,
-        MIN(bs.submitted_at) as first_submission_time,
-        json_agg(
-          json_build_object(
-            'problemId', bs.problem_id,
-            'points', bs.points,
-            'time', bs.submitted_at
-          ) ORDER BY bs.submitted_at
-        ) as submissions
-      FROM best_submissions bs
-      JOIN users u ON bs.user_id = u.id
-      GROUP BY bs.user_id, u.email, u.full_name
-      ORDER BY total_points DESC, solved_problems DESC, first_submission_time ASC
+        COALESCE(ps.total_points, 0) as total_points,
+        COALESCE(ps.solved_problems, 0) as solved_problems,
+        ps.last_submission_time,
+        ps.first_submission_time,
+        COALESCE(ps.submissions, '[]'::json) as submissions
+      FROM contest_participants cp
+      JOIN users u ON cp.user_id = u.id
+      LEFT JOIN participant_scores ps ON cp.user_id = ps.user_id
+      WHERE cp.contest_id = ${contestId}
+      ORDER BY 
+        COALESCE(ps.total_points, 0) DESC, 
+        COALESCE(ps.solved_problems, 0) DESC, 
+        ps.first_submission_time ASC NULLS LAST
     `;
     
     return rows.map(row => ({
       userId: row.user_id,
       email: row.email,
       fullName: row.full_name,
-      totalPoints: parseInt(row.total_points),
-      solvedProblems: parseInt(row.solved_problems),
+      totalPoints: parseInt(row.total_points) || 0,
+      solvedProblems: parseInt(row.solved_problems) || 0,
       lastSubmissionTime: row.last_submission_time,
       submissions: row.submissions
     }));
