@@ -59,6 +59,7 @@ export default function AdminPage() {
       fetchContests();
       fetchAdmins(currentAdmin.id);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, currentAdmin]);
 
   const fetchContests = async () => {

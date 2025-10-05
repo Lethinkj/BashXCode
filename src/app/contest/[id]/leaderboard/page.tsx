@@ -15,6 +15,7 @@ export default function LeaderboardPage({ params }: { params: Promise<{ id: stri
     params.then(({ id }) => {
       setContestId(id);
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -22,6 +23,7 @@ export default function LeaderboardPage({ params }: { params: Promise<{ id: stri
     fetchData();
     const interval = setInterval(fetchData, 5000); // Refresh every 5 seconds for faster updates
     return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [contestId]);
 
   const fetchData = async () => {

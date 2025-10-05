@@ -46,6 +46,7 @@ export default function AdminLeaderboardPage({ params }: { params: Promise<{ id:
     fetchData();
     const interval = setInterval(fetchData, 3000); // Refresh every 3 seconds for real-time updates
     return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [contestId, isAdmin]);
 
   const fetchData = async () => {
@@ -407,7 +408,7 @@ export default function AdminLeaderboardPage({ params }: { params: Promise<{ id:
             </p>
             <div className="bg-yellow-50 border-l-4 border-yellow-400 p-3 mb-4">
               <p className="text-sm text-yellow-800">
-                <strong>Note:</strong> The user will receive a message: "Admin has banned you from this contest for violating rules."
+                <strong>Note:</strong> The user will receive a message: &ldquo;Admin has banned you from this contest for violating rules.&rdquo;
               </p>
             </div>
             <div className="mb-4">

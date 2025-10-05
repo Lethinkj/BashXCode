@@ -153,6 +153,7 @@ export default function ContestPage({ params }: { params: Promise<{ id: string }
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [contestId, userId, userEmail]);
 
 
