@@ -27,7 +27,17 @@ export default function ContestPage({ params }: { params: Promise<{ id: string }
   const [testingAllCases, setTestingAllCases] = useState(false);
   const [timeUntilStart, setTimeUntilStart] = useState<string>('');
   const [tabSwitchCount, setTabSwitchCount] = useState(0);
-  const [showTabWarning, setShowTabWarning] = useState(false);
+  const [notification, setNotification] = useState<{
+    show: boolean;
+    type: 'warning' | 'success' | 'error';
+    title: string;
+    message: string;
+  }>({
+    show: false,
+    type: 'warning',
+    title: '',
+    message: ''
+  });
 
   // Define fetch functions before useEffect hooks
   const fetchContest = useCallback(async () => {
@@ -141,10 +151,17 @@ export default function ContestPage({ params }: { params: Promise<{ id: string }
           }
           return newCount;
         });
-        setShowTabWarning(true);
         
-        // Auto-hide warning after 5 seconds
-        setTimeout(() => setShowTabWarning(false), 5000);
+        // Show tab switch warning notification
+        setNotification({
+          show: true,
+          type: 'warning',
+          title: '⚠️ Tab Switch Detected!',
+          message: `Warning: You switched away from this tab. This action is being monitored. Switch count: ${tabSwitchCount + 1}`
+        });
+        
+        // Auto-hide notification after 5 seconds
+        setTimeout(() => setNotification(prev => ({ ...prev, show: false })), 5000);
       }
     };
 
@@ -191,19 +208,64 @@ export default function ContestPage({ params }: { params: Promise<{ id: string }
 
     if (response.ok) {
       const result = await response.json();
-      alert(
-        `Code submitted successfully!\n\n` +
-        `Submission ID: ${result.id}\n` +
-        `Status: Evaluating...\n\n` +
-        `Please wait a few seconds and check your submissions below for results.`
-      );
-      // Wait 3 seconds then refresh submissions
-      setTimeout(() => {
-        fetchSubmissions();
+      
+      // Show success notification
+      setNotification({
+        show: true,
+        type: 'success',
+        title: '🎉 Submission Successful!',
+        message: `Your solution for "${selectedProblem.title}" has been submitted! Evaluating against ${selectedProblem.testCases.length} test cases...`
+      });
+      
+      // Wait 3 seconds then refresh submissions and check if points awarded
+      setTimeout(async () => {
+        await fetchSubmissions();
+        
+        // Check if the latest submission earned points
+        const submissionsResponse = await fetch(
+          `/api/submissions?contestId=${contestId}&userId=${userId}`
+        );
+        const allSubs = await submissionsResponse.json();
+        const latestSub = allSubs.find((s: Submission) => s.id === result.id);
+        
+        if (latestSub && latestSub.status === 'accepted' && latestSub.passedTestCases === latestSub.totalTestCases) {
+          // All tests passed! Show points notification
+          setNotification({
+            show: true,
+            type: 'success',
+            title: '✅ All Tests Passed!',
+            message: `Congratulations! You earned ${selectedProblem.points} points for solving "${selectedProblem.title}"! 🎊`
+          });
+          
+          // Auto-hide after 8 seconds
+          setTimeout(() => setNotification(prev => ({ ...prev, show: false })), 8000);
+        } else if (latestSub && latestSub.status !== 'accepted') {
+          // Some tests failed
+          setNotification({
+            show: true,
+            type: 'error',
+            title: '❌ Some Tests Failed',
+            message: `Your submission passed ${latestSub.passedTestCases}/${latestSub.totalTestCases} test cases. Keep trying!`
+          });
+          
+          // Auto-hide after 6 seconds
+          setTimeout(() => setNotification(prev => ({ ...prev, show: false })), 6000);
+        } else {
+          // Hide initial notification after 5 seconds
+          setTimeout(() => setNotification(prev => ({ ...prev, show: false })), 5000);
+        }
       }, 3000);
     } else {
       const error = await response.json();
-      alert(`Submission failed: ${error.error || 'Unknown error'}`);
+      setNotification({
+        show: true,
+        type: 'error',
+        title: '❌ Submission Failed',
+        message: error.error || 'Unknown error occurred. Please try again.'
+      });
+      
+      // Auto-hide after 5 seconds
+      setTimeout(() => setNotification(prev => ({ ...prev, show: false })), 5000);
     }
   };
 
@@ -459,16 +521,28 @@ int main() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-primary-950 to-gray-900">
-      {/* Tab Switch Warning */}
-      {showTabWarning && (
-        <div className="fixed top-20 right-4 z-50 bg-red-500 text-white px-6 py-4 rounded-lg shadow-2xl animate-slide-up">
-          <div className="flex items-center gap-3">
-            <span className="text-2xl">⚠️</span>
-            <div>
-              <p className="font-bold">Tab Switch Detected!</p>
-              <p className="text-sm">{userName} - Switching tabs is being monitored</p>
-              <p className="text-xs mt-1">Total switches: {tabSwitchCount}</p>
+      {/* Notification Popup */}
+      {notification.show && (
+        <div className={`fixed top-20 right-4 left-4 sm:left-auto sm:w-96 z-50 ${
+          notification.type === 'warning' ? 'bg-red-500' :
+          notification.type === 'success' ? 'bg-green-500' :
+          'bg-red-600'
+        } text-white px-6 py-4 rounded-lg shadow-2xl animate-slide-in-right`}>
+          <div className="flex items-start gap-3">
+            <span className="text-2xl flex-shrink-0">
+              {notification.type === 'warning' ? '⚠️' :
+               notification.type === 'success' ? '✅' : '❌'}
+            </span>
+            <div className="flex-1">
+              <p className="font-bold text-lg">{notification.title}</p>
+              <p className="text-sm mt-1">{notification.message}</p>
             </div>
+            <button
+              onClick={() => setNotification(prev => ({ ...prev, show: false }))}
+              className="text-white hover:text-gray-200 flex-shrink-0 text-xl font-bold"
+            >
+              ×
+            </button>
           </div>
         </div>
       )}
