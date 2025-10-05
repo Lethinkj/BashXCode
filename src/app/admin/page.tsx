@@ -373,23 +373,23 @@ export default function AdminPage() {
   // Show login form if not authenticated
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full">
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-primary-600 mb-2">Admin Login</h1>
-            <p className="text-gray-600">Clan Contest Platform</p>
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-primary-950 to-gray-900 flex items-center justify-center p-4">
+        <div className="bg-white/10 backdrop-blur-md border border-white/10 rounded-lg shadow-2xl p-6 md:p-8 max-w-md w-full">
+          <div className="text-center mb-6 md:mb-8">
+            <h1 className="text-2xl md:text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-blue-600 mb-2">Admin Login</h1>
+            <p className="text-gray-300 text-sm md:text-base">Aura-7F Contest Platform</p>
           </div>
 
-          <form onSubmit={handleLogin} className="space-y-6">
+          <form onSubmit={handleLogin} className="space-y-4 md:space-y-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-200 mb-2">
                 Email
               </label>
               <input
                 type="email"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-600 focus:border-transparent text-gray-900"
+                className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-white placeholder-gray-400"
                 placeholder="Enter admin email"
                 required
               />
@@ -424,7 +424,7 @@ export default function AdminPage() {
           </form>
 
           <div className="mt-4 text-center">
-            <Link href="/" className="text-sm text-primary-600 hover:text-primary-700">
+            <Link href="/" className="text-sm text-primary-400 hover:text-primary-300">
               ← Back to Homepage
             </Link>
           </div>
@@ -434,18 +434,18 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <nav className="bg-white shadow-lg">
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-primary-950 to-gray-900">
+      <nav className="bg-white/10 backdrop-blur-md border-b border-white/10 shadow-lg">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <Link href="/" className="text-2xl font-bold text-primary-600">
-              Clan Contest Platform - Admin
+            <Link href="/" className="text-lg md:text-2xl font-bold text-white truncate">
+              Aura-7F - Admin
             </Link>
-            <div className="flex items-center gap-4">
-              <span className="text-gray-600">👤 Admin</span>
+            <div className="flex items-center gap-2 md:gap-4">
+              <span className="text-white text-sm hidden sm:inline">👤 {currentAdmin?.fullName || 'Admin'}</span>
               <button
                 onClick={handleLogout}
-                className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition"
+                className="bg-red-600 text-white px-3 md:px-4 py-2 rounded-lg hover:bg-red-700 transition text-sm md:text-base"
               >
                 Logout
               </button>
@@ -454,12 +454,12 @@ export default function AdminPage() {
         </div>
       </nav>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Contest Management</h1>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 md:py-8">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 md:mb-8 gap-3">
+          <h1 className="text-2xl md:text-3xl font-bold text-white">Contest Management</h1>
           <button
             onClick={() => setShowForm(!showForm)}
-            className="bg-primary-600 text-white px-6 py-2 rounded-lg hover:bg-primary-700"
+            className="w-full sm:w-auto bg-primary-600 text-white px-4 md:px-6 py-2 rounded-lg hover:bg-primary-700 text-sm md:text-base transition-colors"
           >
             {showForm ? 'Cancel' : (editingContestId ? 'Cancel Edit' : 'Create New Contest')}
           </button>

@@ -132,24 +132,23 @@ export default function AdminLeaderboardPage({ params }: { params: Promise<{ id:
         </div>
       )}
 
-      {/* Tab Switch Alerts Banner - Presentation Mode */}
-      {presentationMode && Array.isArray(tabSwitches) && tabSwitches.filter(ts => ts.switchCount > 0).length > 0 && (
-        <div className="fixed top-4 left-4 right-24 z-40 bg-red-500 text-white px-6 py-4 rounded-lg shadow-2xl border-4 border-red-600">
-          <h3 className="text-2xl font-bold mb-2">⚠️ TAB SWITCH ALERTS</h3>
-          <div className="space-y-2">
-            {tabSwitches
-              .filter(ts => ts.switchCount > 0)
-              .sort((a, b) => b.switchCount - a.switchCount)
-              .slice(0, 3)
-              .map((ts) => (
-                <div key={ts.userId} className="flex justify-between items-center bg-white/20 px-4 py-2 rounded">
-                  <span className="text-xl font-bold">{ts.userName}</span>
-                  <span className="text-xl font-bold">{ts.switchCount} switches</span>
-                </div>
-              ))}
+      {/* Tab Switch Alert Popup - Auto-dismiss after 10 seconds */}
+      {presentationMode && (() => {
+        const recentSwitches = Array.isArray(tabSwitches) ? tabSwitches.filter(ts => {
+          const timeSinceSwitch = Date.now() - new Date(ts.lastSwitchTime).getTime();
+          return ts.switchCount > 0 && timeSinceSwitch < 10000; // Show for 10 seconds
+        }) : [];
+        
+        return recentSwitches.slice(0, 1).map((ts) => (
+          <div key={ts.userId} className="fixed top-20 left-1/2 transform -translate-x-1/2 z-50 bg-red-500 text-white px-8 py-6 rounded-2xl shadow-2xl border-4 border-red-700 animate-slide-up min-w-[400px]">
+            <div className="text-center">
+              <h3 className="text-3xl font-bold mb-3">⚠️ TAB SWITCH ALERT</h3>
+              <p className="text-2xl font-bold mb-2">{ts.userName}</p>
+              <p className="text-xl">{ts.switchCount} switches</p>
+            </div>
           </div>
-        </div>
-      )}
+        ));
+      })()}
 
       <div className={`mx-auto px-4 sm:px-6 lg:px-8 ${presentationMode ? '' : 'max-w-7xl py-8'}`}>
         {/* Leaderboard */}
@@ -173,16 +172,16 @@ export default function AdminLeaderboardPage({ params }: { params: Promise<{ id:
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className={`bg-gray-100 ${presentationMode ? 'text-xl' : ''}`}>
+              <table className="w-full min-w-full">
+                <thead className={`bg-gray-100 ${presentationMode ? 'text-base md:text-xl' : 'text-sm md:text-base'}`}>
                   <tr>
-                    <th className="px-6 py-4 text-left font-bold text-gray-800">Rank</th>
-                    <th className="px-6 py-4 text-left font-bold text-gray-800">Participant</th>
-                    <th className="px-6 py-4 text-left font-bold text-gray-800">Points</th>
-                    <th className="px-6 py-4 text-left font-bold text-gray-800">Problems Solved</th>
-                    <th className="px-6 py-4 text-left font-bold text-gray-800">Last Submission</th>
+                    <th className="px-2 md:px-6 py-3 md:py-4 text-left font-bold text-gray-800">Rank</th>
+                    <th className="px-2 md:px-6 py-3 md:py-4 text-left font-bold text-gray-800">Participant</th>
+                    <th className="px-2 md:px-6 py-3 md:py-4 text-left font-bold text-gray-800">Points</th>
+                    <th className="px-2 md:px-6 py-3 md:py-4 text-left font-bold text-gray-800 hidden sm:table-cell">Problems</th>
+                    <th className="px-2 md:px-6 py-3 md:py-4 text-left font-bold text-gray-800 hidden md:table-cell">Last Sub.</th>
                     {!presentationMode && (
-                      <th className="px-6 py-4 text-left font-bold text-gray-800">Tab Switches</th>
+                      <th className="px-2 md:px-6 py-3 md:py-4 text-left font-bold text-gray-800 hidden lg:table-cell">Switches</th>
                     )}
                   </tr>
                 </thead>
@@ -198,49 +197,49 @@ export default function AdminLeaderboardPage({ params }: { params: Promise<{ id:
                           index === 2 ? 'bg-orange-50' : ''
                         }`}
                       >
-                        <td className="px-6 py-5 whitespace-nowrap">
-                          <div className="flex items-center gap-2">
-                            {index === 0 && <span className="text-4xl">🥇</span>}
-                            {index === 1 && <span className="text-4xl">🥈</span>}
-                            {index === 2 && <span className="text-4xl">🥉</span>}
-                            <span className={`font-bold text-gray-900 ${presentationMode ? 'text-3xl' : 'text-2xl'}`}>
+                        <td className="px-2 md:px-6 py-3 md:py-5 whitespace-nowrap">
+                          <div className="flex items-center gap-1 md:gap-2">
+                            {index === 0 && <span className="text-2xl md:text-4xl">🥇</span>}
+                            {index === 1 && <span className="text-2xl md:text-4xl">🥈</span>}
+                            {index === 2 && <span className="text-2xl md:text-4xl">🥉</span>}
+                            <span className={`font-bold text-gray-900 ${presentationMode ? 'text-xl md:text-3xl' : 'text-lg md:text-2xl'}`}>
                               #{index + 1}
                             </span>
                           </div>
                         </td>
-                        <td className="px-6 py-5">
-                          <div className={`font-bold text-gray-900 ${presentationMode ? 'text-2xl' : 'text-lg'}`}>
+                        <td className="px-2 md:px-6 py-3 md:py-5">
+                          <div className={`font-bold text-gray-900 ${presentationMode ? 'text-base md:text-2xl' : 'text-sm md:text-lg'}`}>
                             {entry.fullName}
                           </div>
                           {!presentationMode && (
-                            <div className="text-sm text-gray-500">{entry.email}</div>
+                            <div className="text-xs md:text-sm text-gray-500 truncate max-w-[150px] md:max-w-none">{entry.email}</div>
                           )}
                         </td>
-                        <td className="px-6 py-5 whitespace-nowrap">
-                          <div className={`font-bold text-primary-600 ${presentationMode ? 'text-3xl' : 'text-2xl'}`}>
+                        <td className="px-2 md:px-6 py-3 md:py-5 whitespace-nowrap">
+                          <div className={`font-bold text-primary-600 ${presentationMode ? 'text-xl md:text-3xl' : 'text-lg md:text-2xl'}`}>
                             {entry.totalPoints}
                           </div>
                         </td>
-                        <td className="px-6 py-5 whitespace-nowrap">
-                          <div className={`text-gray-900 ${presentationMode ? 'text-2xl' : 'text-lg'}`}>
+                        <td className="px-2 md:px-6 py-3 md:py-5 whitespace-nowrap hidden sm:table-cell">
+                          <div className={`text-gray-900 ${presentationMode ? 'text-base md:text-2xl' : 'text-sm md:text-lg'}`}>
                             {entry.solvedProblems} / {contest?.problems.length || 0}
                           </div>
                         </td>
-                        <td className="px-6 py-5 whitespace-nowrap">
-                          <div className={`text-gray-600 ${presentationMode ? 'text-xl' : 'text-sm'}`}>
+                        <td className="px-2 md:px-6 py-3 md:py-5 whitespace-nowrap hidden md:table-cell">
+                          <div className={`text-gray-600 ${presentationMode ? 'text-sm md:text-xl' : 'text-xs md:text-sm'}`}>
                             {formatTime(entry.lastSubmissionTime)}
                           </div>
                         </td>
                         {!presentationMode && (
-                          <td className="px-6 py-5 whitespace-nowrap">
+                          <td className="px-2 md:px-6 py-3 md:py-5 whitespace-nowrap hidden lg:table-cell">
                             {tabSwitchLog && tabSwitchLog.switchCount > 0 ? (
                               <div className="flex items-center gap-2">
-                                <span className="text-red-500 font-bold text-lg">
+                                <span className="text-red-500 font-bold text-base md:text-lg">
                                   ⚠️ {tabSwitchLog.switchCount}
                                 </span>
                               </div>
                             ) : (
-                              <span className="text-green-500">✓ None</span>
+                              <span className="text-green-500 text-sm md:text-base">✓ None</span>
                             )}
                           </td>
                         )}
