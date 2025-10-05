@@ -217,19 +217,32 @@ export default function ContestPage({ params }: { params: Promise<{ id: string }
     if (response.ok) {
       const result = await response.json();
       
-      // Wait 3 seconds then refresh submissions and check if points awarded
-      setTimeout(async () => {
-        await fetchSubmissions();
+      // Poll for submission results with retry logic
+      const checkSubmissionResult = async (attemptCount = 0): Promise<void> => {
+        const maxAttempts = 5;
+        const delayMs = 1000; // Check every 1 second
         
-        // Check if the latest submission earned points
-        const submissionsResponse = await fetch(
-          `/api/submissions?contestId=${contestId}&userId=${userId}`
-        );
-        const allSubs = await submissionsResponse.json();
-        const latestSub = allSubs.find((s: Submission) => s.id === result.id);
-        
-        // Update the notification with final result (no hide/show, just update)
-        if (latestSub) {
+        try {
+          await fetchSubmissions();
+          
+          // Fetch the specific submission
+          const submissionsResponse = await fetch(
+            `/api/submissions?contestId=${contestId}&userId=${userId}`
+          );
+          const allSubs = await submissionsResponse.json();
+          const latestSub = allSubs.find((s: Submission) => s.id === result.id);
+          
+          if (!latestSub) {
+            throw new Error('Submission not found');
+          }
+          
+          // If still running and we haven't exceeded max attempts, retry
+          if (latestSub.status === 'running' && attemptCount < maxAttempts) {
+            setTimeout(() => checkSubmissionResult(attemptCount + 1), delayMs);
+            return;
+          }
+          
+          // Update the notification with final result
           if (latestSub.status === 'accepted' && latestSub.passedTestCases === latestSub.totalTestCases) {
             // All tests passed! Show points notification
             setNotification({
@@ -241,20 +254,32 @@ export default function ContestPage({ params }: { params: Promise<{ id: string }
             
             // Auto-hide after 8 seconds
             setTimeout(() => setNotification(prev => ({ ...prev, show: false })), 8000);
+          } else if (latestSub.status === 'running') {
+            // Still running after max attempts
+            setNotification({
+              show: true,
+              type: 'warning',
+              title: '⏳ Still Processing',
+              message: 'Your submission is taking longer than expected. Please refresh the page in a moment.'
+            });
+            setTimeout(() => setNotification(prev => ({ ...prev, show: false })), 6000);
           } else {
-            // Some tests failed or wrong answer
+            // Some tests failed or error occurred
+            const passedCount = latestSub.passedTestCases || 0;
+            const totalCount = latestSub.totalTestCases || selectedProblem.testCases.length;
+            
             setNotification({
               show: true,
               type: 'error',
               title: '❌ Some Tests Failed',
-              message: `Your submission passed ${latestSub.passedTestCases}/${latestSub.totalTestCases} test cases. Keep trying!`
+              message: `Your submission passed ${passedCount}/${totalCount} test cases. Keep trying!`
             });
             
             // Auto-hide after 6 seconds
             setTimeout(() => setNotification(prev => ({ ...prev, show: false })), 6000);
           }
-        } else {
-          // Could not find submission result
+        } catch (error) {
+          console.error('Error checking submission result:', error);
           setNotification({
             show: true,
             type: 'error',
@@ -263,7 +288,10 @@ export default function ContestPage({ params }: { params: Promise<{ id: string }
           });
           setTimeout(() => setNotification(prev => ({ ...prev, show: false })), 5000);
         }
-      }, 3000);
+      };
+      
+      // Start checking after 2 seconds (give backend time to start processing)
+      setTimeout(() => checkSubmissionResult(), 2000);
     } else {
       const error = await response.json();
       setNotification({
