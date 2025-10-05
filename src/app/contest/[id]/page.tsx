@@ -157,7 +157,7 @@ export default function ContestPage({ params }: { params: Promise<{ id: string }
           show: true,
           type: 'warning',
           title: '⚠️ Tab Switch Detected!',
-          message: `Warning: You switched away from this tab. This action is being monitored. Switch count: ${tabSwitchCount + 1}`
+          message: 'Warning: You switched away from this tab. This action is being monitored by the admin.'
         });
         
         // Auto-hide notification after 5 seconds
