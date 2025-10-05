@@ -179,18 +179,26 @@ export default function ContestPage({ params }: { params: Promise<{ id: string }
     if (!selectedProblem || !contestId) return;
 
     if (!code.trim()) {
-      alert('Please write some code before submitting!');
+      setNotification({
+        show: true,
+        type: 'warning',
+        title: '⚠️ No Code',
+        message: 'Please write some code before submitting!'
+      });
+      setTimeout(() => setNotification(prev => ({ ...prev, show: false })), 4000);
       return;
     }
 
-    // Submit solution
-    const confirmed = confirm(
-      `Submit your solution for "${selectedProblem.title}"?\n\n` +
-      `Your code will be tested against ${selectedProblem.testCases.length} test cases.\n` +
-      `You will earn ${selectedProblem.points} points only if ALL test cases pass.`
-    );
+    // Clear any existing notifications before submitting
+    setNotification(prev => ({ ...prev, show: false }));
 
-    if (!confirmed) return;
+    // Show submitting notification
+    setNotification({
+      show: true,
+      type: 'warning',
+      title: '⏳ Submitting...',
+      message: `Testing your solution for "${selectedProblem.title}" against ${selectedProblem.testCases.length} test cases...`
+    });
 
     const submission = {
       contestId: contestId,
@@ -209,14 +217,6 @@ export default function ContestPage({ params }: { params: Promise<{ id: string }
     if (response.ok) {
       const result = await response.json();
       
-      // Show success notification
-      setNotification({
-        show: true,
-        type: 'success',
-        title: '🎉 Submission Successful!',
-        message: `Your solution for "${selectedProblem.title}" has been submitted! Evaluating against ${selectedProblem.testCases.length} test cases...`
-      });
-      
       // Wait 3 seconds then refresh submissions and check if points awarded
       setTimeout(async () => {
         await fetchSubmissions();
@@ -228,37 +228,41 @@ export default function ContestPage({ params }: { params: Promise<{ id: string }
         const allSubs = await submissionsResponse.json();
         const latestSub = allSubs.find((s: Submission) => s.id === result.id);
         
-        // Hide the initial "Submission Successful" notification first
-        setNotification(prev => ({ ...prev, show: false }));
-        
-        // Wait a brief moment before showing the final result
-        setTimeout(() => {
-          if (latestSub) {
-            if (latestSub.status === 'accepted' && latestSub.passedTestCases === latestSub.totalTestCases) {
-              // All tests passed! Show points notification
-              setNotification({
-                show: true,
-                type: 'success',
-                title: '✅ All Tests Passed!',
-                message: `Congratulations! You earned ${selectedProblem.points} points for solving "${selectedProblem.title}"! 🎊`
-              });
-              
-              // Auto-hide after 8 seconds
-              setTimeout(() => setNotification(prev => ({ ...prev, show: false })), 8000);
-            } else {
-              // Some tests failed or wrong answer
-              setNotification({
-                show: true,
-                type: 'error',
-                title: '❌ Some Tests Failed',
-                message: `Your submission passed ${latestSub.passedTestCases}/${latestSub.totalTestCases} test cases. Keep trying!`
-              });
-              
-              // Auto-hide after 6 seconds
-              setTimeout(() => setNotification(prev => ({ ...prev, show: false })), 6000);
-            }
+        // Update the notification with final result (no hide/show, just update)
+        if (latestSub) {
+          if (latestSub.status === 'accepted' && latestSub.passedTestCases === latestSub.totalTestCases) {
+            // All tests passed! Show points notification
+            setNotification({
+              show: true,
+              type: 'success',
+              title: '✅ All Tests Passed!',
+              message: `Congratulations! You earned ${selectedProblem.points} points for solving "${selectedProblem.title}"! 🎊`
+            });
+            
+            // Auto-hide after 8 seconds
+            setTimeout(() => setNotification(prev => ({ ...prev, show: false })), 8000);
+          } else {
+            // Some tests failed or wrong answer
+            setNotification({
+              show: true,
+              type: 'error',
+              title: '❌ Some Tests Failed',
+              message: `Your submission passed ${latestSub.passedTestCases}/${latestSub.totalTestCases} test cases. Keep trying!`
+            });
+            
+            // Auto-hide after 6 seconds
+            setTimeout(() => setNotification(prev => ({ ...prev, show: false })), 6000);
           }
-        }, 300); // Small delay to allow smooth transition
+        } else {
+          // Could not find submission result
+          setNotification({
+            show: true,
+            type: 'error',
+            title: '❌ Error',
+            message: 'Could not retrieve submission results. Please refresh the page.'
+          });
+          setTimeout(() => setNotification(prev => ({ ...prev, show: false })), 5000);
+        }
       }, 3000);
     } else {
       const error = await response.json();
