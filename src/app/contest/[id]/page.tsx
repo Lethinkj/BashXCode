@@ -38,6 +38,8 @@ export default function ContestPage({ params }: { params: Promise<{ id: string }
     title: '',
     message: ''
   });
+  const [showMobileSidebar, setShowMobileSidebar] = useState(false);
+  const [showProblemDescription, setShowProblemDescription] = useState(false);
 
   // Define fetch functions before useEffect hooks
   const fetchContest = useCallback(async () => {
@@ -624,11 +626,47 @@ int main() {
         </div>
       </nav>
 
-      <div className="flex flex-col lg:flex-row h-[calc(100vh-4rem)] overflow-hidden">
+      <div className="flex h-[calc(100vh-4rem)] overflow-hidden relative">
+        {/* Mobile Menu Button */}
+        <button
+          onClick={() => setShowMobileSidebar(!showMobileSidebar)}
+          className="lg:hidden fixed bottom-4 left-4 z-50 bg-primary-600 text-white p-4 rounded-full shadow-lg hover:bg-primary-700 transition-colors"
+        >
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+
+        {/* Mobile Overlay */}
+        {showMobileSidebar && (
+          <div 
+            className="lg:hidden fixed inset-0 bg-black/50 z-40"
+            onClick={() => setShowMobileSidebar(false)}
+          />
+        )}
+
         {/* Problems Sidebar */}
-        <div className="w-full lg:w-64 xl:w-72 bg-white/95 backdrop-blur-sm shadow-lg overflow-y-auto border-r border-gray-200 lg:max-h-full">
-          <div className="p-3 lg:p-4">
-            <h3 className="font-bold text-lg mb-4 text-gray-900">📝 Problems</h3>
+        <div className={`
+          fixed lg:relative inset-y-0 left-0 z-40
+          w-80 lg:w-64 xl:w-72 
+          bg-white shadow-lg overflow-y-auto border-r border-gray-200
+          transform transition-transform duration-300 ease-in-out
+          ${showMobileSidebar ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+        `}>
+          <div className="p-4 sticky top-0 bg-white border-b border-gray-200 z-10">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-bold text-lg text-gray-900">📝 Problems</h3>
+              <button
+                onClick={() => setShowMobileSidebar(false)}
+                className="lg:hidden text-gray-600 hover:text-gray-900"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          </div>
+          <div className="p-4">
             {contest && Array.isArray(contest.problems) && contest.problems.map((problem) => {
               const userSubmissions = submissions.filter(s => s.problemId === problem.id);
               const solved = userSubmissions.some(s => s.status === 'accepted');
@@ -636,7 +674,11 @@ int main() {
               return (
                 <button
                   key={problem.id}
-                  onClick={() => setSelectedProblem(problem)}
+                  onClick={() => {
+                    setSelectedProblem(problem);
+                    setShowMobileSidebar(false);
+                    setShowProblemDescription(false);
+                  }}
                   className={`w-full text-left p-3 mb-2 rounded-lg transition ${
                     selectedProblem?.id === problem.id
                       ? 'bg-primary-600 text-white'
@@ -651,11 +693,108 @@ int main() {
                 </button>
               );
             })}
+            
+            {/* Submissions Section in Sidebar */}
+            <div className="mt-6 pt-6 border-t border-gray-200">
+              <h3 className="font-bold text-lg mb-3 text-gray-900">📊 Submissions</h3>
+              {submissions.length === 0 ? (
+                <p className="text-gray-500 text-sm">No submissions yet</p>
+              ) : (
+                <div className="space-y-2">
+                  {submissions.slice().reverse().slice(0, 5).map((sub) => (
+                    <div key={sub.id} className="bg-gray-50 p-2 rounded-lg border text-xs">
+                      <div className="flex justify-between items-center mb-1">
+                        <span className={`px-2 py-0.5 rounded text-xs font-semibold ${
+                          sub.status === 'accepted' ? 'bg-green-100 text-green-800' :
+                          sub.status === 'running' ? 'bg-blue-100 text-blue-800' :
+                          'bg-red-100 text-red-800'
+                        }`}>
+                          {sub.status === 'accepted' ? '✓' : sub.status === 'running' ? '⟳' : '✗'}
+                        </span>
+                        <span className="text-gray-500">
+                          {new Date(sub.submittedAt).toLocaleTimeString()}
+                        </span>
+                      </div>
+                      <div className="text-gray-700">
+                        {sub.passedTestCases}/{sub.totalTestCases} • {sub.points} pts
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
-        {/* Problem Description */}
-        <div className="w-full lg:w-1/3 xl:w-2/5 bg-white border-r overflow-y-auto p-4 lg:p-6 lg:max-h-full">
+        {/* Problem Description Modal for Mobile */}
+        {showProblemDescription && (
+          <>
+            <div 
+              className="lg:hidden fixed inset-0 bg-black/50 z-40"
+              onClick={() => setShowProblemDescription(false)}
+            />
+            <div className="lg:hidden fixed inset-x-0 top-16 bottom-0 z-50 bg-white overflow-y-auto">
+              <div className="p-4 sticky top-0 bg-white border-b border-gray-200 z-10">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-bold text-lg text-gray-900">Problem Description</h3>
+                  <button
+                    onClick={() => setShowProblemDescription(false)}
+                    className="text-gray-600 hover:text-gray-900"
+                  >
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+              <div className="p-4">
+                {selectedProblem && (
+                  <>
+                    <h2 className="text-xl font-bold text-gray-900 mb-3">{selectedProblem.title}</h2>
+                    <div className="flex gap-2 mb-4">
+                      <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
+                        selectedProblem.difficulty === 'Easy' ? 'bg-green-100 text-green-800' :
+                        selectedProblem.difficulty === 'Medium' ? 'bg-yellow-100 text-yellow-800' :
+                        'bg-red-100 text-red-800'
+                      }`}>
+                        {selectedProblem.difficulty}
+                      </span>
+                      <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-semibold">
+                        {selectedProblem.points} points
+                      </span>
+                    </div>
+                    <div className="prose max-w-none text-gray-700">
+                      <p className="whitespace-pre-wrap">{selectedProblem.description}</p>
+                    </div>
+                    
+                    <div className="mt-6">
+                      <h3 className="font-bold text-lg mb-2 text-gray-900">Sample Test Case</h3>
+                      {selectedProblem.testCases.slice(0, 1).map((tc) => (
+                        <div key={tc.id} className="mb-4 bg-gray-50 p-4 rounded-lg">
+                          <p className="font-semibold text-gray-900">Example</p>
+                          <div className="mt-2">
+                            <p className="text-sm text-gray-600">Input:</p>
+                            <pre className="bg-white p-2 rounded border text-gray-900">{tc.input}</pre>
+                          </div>
+                          <div className="mt-2">
+                            <p className="text-sm text-gray-600">Expected Output:</p>
+                            <pre className="bg-white p-2 rounded border text-gray-900">{tc.expectedOutput}</pre>
+                          </div>
+                        </div>
+                      ))}
+                      <p className="text-sm text-gray-500 italic mt-2">
+                        Note: Your solution will be tested against {selectedProblem.testCases.length} hidden test cases.
+                      </p>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* Problem Description - Desktop Only */}
+        <div className="hidden lg:block lg:w-1/3 xl:w-2/5 bg-white border-r overflow-y-auto p-6">
           {selectedProblem && (
             <>
               <h2 className="text-xl lg:text-2xl font-bold text-gray-900 mb-3 lg:mb-4">{selectedProblem.title}</h2>
@@ -738,43 +877,55 @@ int main() {
           )}
         </div>
 
-        {/* Code Editor */}
-        <div className="flex-1 flex flex-col min-h-0">
-          <div className="bg-white border-b p-3 lg:p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-            <div className="flex items-center gap-2 lg:gap-3 flex-wrap">
-              <select
-                value={language}
-                onChange={(e) => setLanguage(e.target.value)}
-                className="px-3 py-2 lg:px-4 border rounded-lg text-gray-900 text-sm lg:text-base"
-              >
-                <option value="python">Python</option>
-                <option value="javascript">JavaScript</option>
-                <option value="java">Java</option>
-                <option value="cpp">C++</option>
-                <option value="c">C</option>
-              </select>
-              <span className="text-xs lg:text-sm text-gray-600 px-2 lg:px-3 py-1 bg-gray-100 rounded-full">
-                🌐 API Mode
+        {/* Code Editor - Full Screen */}
+        <div className="flex-1 flex flex-col min-h-0 w-full">
+          {/* Toolbar */}
+          <div className="bg-white border-b p-2 lg:p-4 flex flex-col gap-2">
+            {/* Top Row - Language and Problem Info Button */}
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <select
+                  value={language}
+                  onChange={(e) => setLanguage(e.target.value)}
+                  className="px-3 py-2 border rounded-lg text-gray-900 text-sm"
+                >
+                  <option value="python">Python</option>
+                  <option value="javascript">JavaScript</option>
+                  <option value="java">Java</option>
+                  <option value="cpp">C++</option>
+                  <option value="c">C</option>
+                </select>
+                <button
+                  onClick={() => setShowProblemDescription(true)}
+                  className="lg:hidden bg-blue-500 text-white px-3 py-2 rounded-lg text-sm hover:bg-blue-600 transition-colors"
+                >
+                  📄 Problem
+                </button>
+              </div>
+              <span className="text-xs text-gray-600 px-2 py-1 bg-gray-100 rounded-full whitespace-nowrap">
+                🌐 API
               </span>
             </div>
-            <div className="flex gap-2 flex-wrap w-full sm:w-auto">
+            
+            {/* Bottom Row - Action Buttons */}
+            <div className="grid grid-cols-3 gap-2">
               <button
                 onClick={handleRunCode}
-                className="flex-1 sm:flex-none bg-green-600 text-white px-4 lg:px-6 py-2 rounded-lg hover:bg-green-700 text-sm lg:text-base transition-colors"
+                className="bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700 text-xs sm:text-sm transition-colors font-medium"
               >
-                Run Code
+                ▶ Run
               </button>
               <button
                 onClick={handleTestAllCases}
                 disabled={testingAllCases}
-                className="flex-1 sm:flex-none bg-blue-600 text-white px-4 lg:px-6 py-2 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-sm lg:text-base transition-colors"
+                className="bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-xs sm:text-sm transition-colors font-medium"
               >
-                {testingAllCases ? 'Testing...' : 'Test All Cases'}
+                {testingAllCases ? '⏳' : '🧪 Test'}
               </button>
               <button
                 onClick={handleSubmit}
                 disabled={!allTestsPassed || !contest || !isContestActive(contest.startTime, contest.endTime)}
-                className="flex-1 sm:flex-none bg-primary-600 text-white px-4 lg:px-6 py-2 rounded-lg hover:bg-primary-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-sm lg:text-base font-semibold transition-colors"
+                className="bg-primary-600 text-white px-3 py-2 rounded-lg hover:bg-primary-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-xs sm:text-sm font-semibold transition-colors"
                 title={
                   !allTestsPassed
                     ? 'Click "Test All Cases" first and pass all tests'
@@ -783,56 +934,71 @@ int main() {
                     : 'Submit your solution'
                 }
               >
-                Submit {!allTestsPassed && '(Test all first)'}
+                ✓ Submit
               </button>
             </div>
           </div>
 
+          {/* Editor and I/O Section */}
           <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
-            <Editor
-              height="55%"
-              language={language === 'cpp' ? 'cpp' : language}
-              value={code}
-              onChange={(value) => setCode(value || '')}
-              theme="vs-dark"
-              options={{
-                minimap: { enabled: false },
-                fontSize: 14,
-                // Disable copy-paste to prevent cheating
-                contextmenu: false,
-                quickSuggestions: false,
-                wordBasedSuggestions: 'off',
-              }}
-              onMount={(editor) => {
-                // Prevent copy, cut, and paste
-                editor.onKeyDown((e) => {
-                  const isCopy = (e.ctrlKey || e.metaKey) && e.code === 'KeyC';
-                  const isCut = (e.ctrlKey || e.metaKey) && e.code === 'KeyX';
-                  const isPaste = (e.ctrlKey || e.metaKey) && e.code === 'KeyV';
-                  
-                  if (isCopy || isCut || isPaste) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                  }
-                });
-              }}
-            />
+            {/* Code Editor - Takes 60% on mobile, 55% on desktop */}
+            <div className="h-[60%] lg:h-[55%]">
+              <Editor
+                height="100%"
+                language={language === 'cpp' ? 'cpp' : language}
+                value={code}
+                onChange={(value) => setCode(value || '')}
+                theme="vs-dark"
+                options={{
+                  minimap: { enabled: false },
+                  fontSize: 12,
+                  lineNumbers: 'on',
+                  scrollBeyondLastLine: false,
+                  automaticLayout: true,
+                  // Disable copy-paste to prevent cheating
+                  contextmenu: false,
+                  quickSuggestions: false,
+                  wordBasedSuggestions: 'off',
+                }}
+                onMount={(editor) => {
+                  // Prevent copy, cut, and paste
+                  editor.onKeyDown((e) => {
+                    const isCopy = (e.ctrlKey || e.metaKey) && e.code === 'KeyC';
+                    const isCut = (e.ctrlKey || e.metaKey) && e.code === 'KeyX';
+                    const isPaste = (e.ctrlKey || e.metaKey) && e.code === 'KeyV';
+                    
+                    if (isCopy || isCut || isPaste) {
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }
+                  });
+                }}
+              />
+            </div>
             
-            <div className="h-[45%] border-t flex-shrink-0 overflow-hidden">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 lg:gap-4 p-3 lg:p-4 h-full">
-                <div className="flex flex-col min-h-0">
-                  <label className="block text-xs lg:text-sm font-medium text-gray-700 mb-2">Test Input</label>
+            {/* Input/Output Section - Takes 40% on mobile, 45% on desktop */}
+            <div className="h-[40%] lg:h-[45%] border-t bg-white flex-shrink-0 overflow-hidden">
+              <div className="h-full flex flex-col p-2 lg:p-4 gap-2">
+                {/* Test Input */}
+                <div className="flex-1 min-h-0 flex flex-col">
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">
+                    📥 Test Input
+                  </label>
                   <textarea
                     value={testInput}
                     onChange={(e) => setTestInput(e.target.value)}
-                    className="w-full flex-1 border rounded-lg p-2 font-mono text-xs lg:text-sm text-gray-900"
+                    className="w-full flex-1 border-2 border-gray-300 rounded-lg p-2 font-mono text-xs focus:border-blue-500 focus:outline-none text-gray-900 resize-none"
                     placeholder="Enter test input here..."
                   />
                 </div>
-                <div className="flex flex-col min-h-0">
-                  <label className="block text-xs lg:text-sm font-medium text-gray-700 mb-2">Output</label>
-                  <pre className="w-full flex-1 border rounded-lg p-2 font-mono text-xs lg:text-sm bg-gray-50 overflow-auto text-gray-900">
-                    {testOutput || 'Output will appear here...'}
+                
+                {/* Output */}
+                <div className="flex-1 min-h-0 flex flex-col">
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">
+                    📤 Output
+                  </label>
+                  <pre className="w-full flex-1 border-2 border-gray-300 rounded-lg p-2 font-mono text-xs bg-gray-50 overflow-auto text-gray-900">
+{testOutput || '// Output will appear here...\n// Click "Run" to test your code\n// Click "Test" to check all test cases\n// Click "Submit" after passing all tests'}
                   </pre>
                 </div>
               </div>

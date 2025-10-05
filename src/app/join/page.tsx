@@ -106,26 +106,26 @@ export default function JoinContestPage() {
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-primary-950 to-gray-900">
       {/* Navigation */}
       <nav className="bg-white/10 backdrop-blur-md border-b border-white/10 shadow-lg">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
               <Logo size="sm" noLink />
-              <h1 className="text-2xl font-bold text-white">Aura-7F Contests</h1>
+              <h1 className="text-base sm:text-xl lg:text-2xl font-bold text-white truncate">Aura-7F</h1>
             </div>
-            <div className="flex items-center gap-4">
-              <div className="text-sm">
-                <span className="font-medium text-white">{user.fullName}</span>
-                <span className="ml-2 text-gray-300">({user.email})</span>
+            <div className="flex items-center gap-1 sm:gap-2 lg:gap-4 flex-shrink-0">
+              <div className="text-xs sm:text-sm hidden md:block max-w-[200px] truncate">
+                <span className="font-medium text-white block truncate">{user.fullName}</span>
+                <span className="text-gray-300 text-xs truncate block">({user.email})</span>
               </div>
               <Link
                 href="/profile"
-                className="px-4 py-2 text-sm text-white bg-gray-700 hover:bg-gray-600 rounded-lg font-semibold transition-colors"
+                className="px-2 sm:px-3 lg:px-4 py-1.5 sm:py-2 text-xs sm:text-sm text-white bg-gray-700 hover:bg-gray-600 rounded-lg font-semibold transition-colors"
               >
                 Profile
               </Link>
               <button
                 onClick={handleLogout}
-                className="px-4 py-2 text-sm text-white bg-primary-600 hover:bg-primary-700 rounded-lg font-semibold transition-colors"
+                className="px-2 sm:px-3 lg:px-4 py-1.5 sm:py-2 text-xs sm:text-sm text-white bg-primary-600 hover:bg-primary-700 rounded-lg font-semibold transition-colors"
               >
                 Logout
               </button>
@@ -134,15 +134,15 @@ export default function JoinContestPage() {
         </div>
       </nav>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 py-6 sm:py-8 lg:py-12">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8">
           {/* Join Contest Section */}
           <div>
-            <div className="bg-white/95 backdrop-blur-sm rounded-xl shadow-2xl p-8">
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">
+            <div className="bg-white/95 backdrop-blur-sm rounded-xl shadow-2xl p-4 sm:p-6 lg:p-8">
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-3 sm:mb-4">
                 Join a Contest
               </h2>
-              <p className="text-gray-600 mb-6">
+              <p className="text-sm sm:text-base text-gray-600 mb-4 sm:mb-6">
                 Enter the contest code provided by your instructor to join
               </p>
 
@@ -183,9 +183,9 @@ export default function JoinContestPage() {
             </div>
 
             {/* Quick Tips */}
-            <div className="mt-6 bg-primary-500/10 border border-primary-400/30 rounded-lg p-4 backdrop-blur-sm">
-              <h3 className="font-semibold text-white mb-2">💡 Quick Tips</h3>
-              <ul className="text-sm text-gray-200 space-y-1">
+            <div className="mt-4 sm:mt-6 bg-primary-500/10 border border-primary-400/30 rounded-lg p-3 sm:p-4 backdrop-blur-sm">
+              <h3 className="text-sm sm:text-base font-semibold text-white mb-2">💡 Quick Tips</h3>
+              <ul className="text-xs sm:text-sm text-gray-200 space-y-1">
                 <li>• Contest codes are case-insensitive</li>
                 <li>• You can join multiple contests</li>
                 <li>• Contests may have start/end times</li>
@@ -196,8 +196,8 @@ export default function JoinContestPage() {
 
           {/* My Contests Section */}
           <div>
-            <div className="bg-white/95 backdrop-blur-sm rounded-xl shadow-2xl p-8">
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">
+            <div className="bg-white/95 backdrop-blur-sm rounded-xl shadow-2xl p-4 sm:p-6 lg:p-8">
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-3 sm:mb-4">
                 My Contests
               </h2>
 

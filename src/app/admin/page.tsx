@@ -455,16 +455,16 @@ export default function AdminPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-primary-950 to-gray-900">
       <nav className="bg-white/10 backdrop-blur-md border-b border-white/10 shadow-lg">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <Link href="/" className="text-lg md:text-2xl font-bold text-white truncate">
+            <Link href="/" className="text-base sm:text-lg lg:text-2xl font-bold text-white truncate flex-1 min-w-0 mr-2">
               Aura-7F - Admin
             </Link>
-            <div className="flex items-center gap-2 md:gap-4">
-              <span className="text-white text-sm hidden sm:inline">👤 {currentAdmin?.fullName || 'Admin'}</span>
+            <div className="flex items-center gap-1 sm:gap-2 lg:gap-4 flex-shrink-0">
+              <span className="text-white text-xs sm:text-sm hidden md:inline truncate max-w-[150px]">👤 {currentAdmin?.fullName || 'Admin'}</span>
               <button
                 onClick={handleLogout}
-                className="bg-red-600 text-white px-3 md:px-4 py-2 rounded-lg hover:bg-red-700 transition text-sm md:text-base"
+                className="bg-red-600 text-white px-2 sm:px-3 lg:px-4 py-1.5 sm:py-2 rounded-lg hover:bg-red-700 transition text-xs sm:text-sm lg:text-base whitespace-nowrap"
               >
                 Logout
               </button>
@@ -473,12 +473,12 @@ export default function AdminPage() {
         </div>
       </nav>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 md:py-8">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 md:mb-8 gap-3">
-          <h1 className="text-2xl md:text-3xl font-bold text-white">Contest Management</h1>
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 py-3 sm:py-6 lg:py-8">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 sm:mb-6 lg:mb-8 gap-2 sm:gap-3">
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-white">Contest Management</h1>
           <button
             onClick={() => setShowForm(!showForm)}
-            className="w-full sm:w-auto bg-primary-600 text-white px-4 md:px-6 py-2 rounded-lg hover:bg-primary-700 text-sm md:text-base transition-colors"
+            className="w-full sm:w-auto bg-primary-600 text-white px-3 sm:px-4 lg:px-6 py-2 rounded-lg hover:bg-primary-700 text-xs sm:text-sm lg:text-base transition-colors whitespace-nowrap"
           >
             {showForm ? 'Cancel' : (editingContestId ? 'Cancel Edit' : 'Create New Contest')}
           </button>
@@ -637,56 +637,69 @@ export default function AdminPage() {
           </div>
         )}
 
-        <div className="grid gap-6">
-          <h2 className="text-2xl font-bold text-gray-900">Existing Contests</h2>
+        <div className="grid gap-4 sm:gap-6">
+          <h2 className="text-xl sm:text-2xl font-bold text-white">Existing Contests</h2>
           {contests.map((contest) => (
-            <div key={contest.id} className="bg-white rounded-lg shadow p-6">
-              <div className="flex justify-between items-start">
+            <div key={contest.id} className="bg-white rounded-lg shadow p-4 sm:p-6">
+              <div className="flex flex-col gap-4">
+                {/* Contest Info */}
                 <div className="flex-1">
-                  <h3 className="text-xl font-bold text-gray-900">{contest.title}</h3>
-                  <p className="text-gray-600 mt-2">{contest.description}</p>
-                  <div className="flex gap-4 mt-3 text-sm text-gray-600">
+                  <h3 className="text-lg sm:text-xl font-bold text-gray-900 break-words">{contest.title}</h3>
+                  <p className="text-sm sm:text-base text-gray-600 mt-2 break-words">{contest.description}</p>
+                  
+                  {/* Meta Info - Stacked on mobile */}
+                  <div className="flex flex-col sm:flex-row sm:gap-4 mt-3 text-xs sm:text-sm text-gray-600 space-y-1 sm:space-y-0">
                     <span>📝 {contest.problems.length} problems</span>
-                    <span>🕒 {new Date(contest.startTime).toLocaleString()}</span>
-                    <span>⏱️ {new Date(contest.endTime).toLocaleString()}</span>
+                    <span className="hidden sm:inline">🕒 {new Date(contest.startTime).toLocaleString()}</span>
+                    <span className="hidden sm:inline">⏱️ {new Date(contest.endTime).toLocaleString()}</span>
+                    <span className="sm:hidden">🕒 {new Date(contest.startTime).toLocaleDateString()} {new Date(contest.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                    <span className="sm:hidden">⏱️ {new Date(contest.endTime).toLocaleDateString()} {new Date(contest.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                   </div>
-                  <div className="mt-3 flex items-center gap-2">
-                    <span className="text-sm font-semibold text-gray-700">Contest Code:</span>
-                    <code className="bg-primary-50 text-primary-700 px-3 py-1 rounded font-mono font-bold text-lg">
-                      {contest.contestCode || 'N/A'}
-                    </code>
-                    {contest.contestCode && (
-                      <button
-                        onClick={() => copyContestCode(contest.contestCode!)}
-                        className="text-primary-600 hover:text-primary-700 text-sm underline"
-                      >
-                        Copy Code
-                      </button>
-                    )}
+                  
+                  {/* Contest Code */}
+                  <div className="mt-3 flex flex-col sm:flex-row sm:items-center gap-2">
+                    <span className="text-xs sm:text-sm font-semibold text-gray-700">Contest Code:</span>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <code className="bg-primary-50 text-primary-700 px-2 sm:px-3 py-1 rounded font-mono font-bold text-base sm:text-lg">
+                        {contest.contestCode || 'N/A'}
+                      </code>
+                      {contest.contestCode && (
+                        <button
+                          onClick={() => copyContestCode(contest.contestCode!)}
+                          className="text-primary-600 hover:text-primary-700 text-xs sm:text-sm underline"
+                        >
+                          Copy Code
+                        </button>
+                      )}
+                    </div>
                   </div>
+                  
+                  {/* Edit Button */}
                   <button
                     onClick={() => handleEditContest(contest)}
-                    className="mt-3 bg-amber-500 text-white px-4 py-2 rounded-lg hover:bg-amber-600 font-semibold text-sm"
+                    className="mt-3 bg-amber-500 text-white px-3 sm:px-4 py-2 rounded-lg hover:bg-amber-600 font-semibold text-xs sm:text-sm w-full sm:w-auto"
                   >
                     ✏️ Edit Contest
                   </button>
                 </div>
-                <div className="flex gap-2">
+                
+                {/* Action Buttons - Stacked on mobile */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                   <button
                     onClick={() => copyContestUrl(contest.id)}
-                    className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm"
+                    className="bg-blue-600 text-white px-3 sm:px-4 py-2 rounded-lg hover:bg-blue-700 text-xs sm:text-sm w-full"
                   >
                     Copy URL
                   </button>
                   <Link
                     href={`/admin/contest/${contest.id}/leaderboard`}
-                    className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 text-sm flex items-center"
+                    className="bg-green-600 text-white px-3 sm:px-4 py-2 rounded-lg hover:bg-green-700 text-xs sm:text-sm flex items-center justify-center w-full"
                   >
                     📊 Admin Leaderboard
                   </Link>
                   <button
                     onClick={() => handleDeleteContest(contest.id, contest.title)}
-                    className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 text-sm"
+                    className="bg-red-600 text-white px-3 sm:px-4 py-2 rounded-lg hover:bg-red-700 text-xs sm:text-sm w-full"
                   >
                     Delete
                   </button>
