@@ -119,16 +119,37 @@ export default function AdminPage() {
     }
   };
 
-  const handleToggleAdminStatus = async (adminId: string, currentStatus: boolean) => {
-    if (!confirm(`Are you sure you want to ${currentStatus ? 'disable' : 'enable'} this admin?`)) {
+  const handleRemoveAdmin = async (adminId: string, adminEmail: string) => {
+    if (adminId === currentAdmin?.id) {
+      alert('You cannot remove yourself!');
+      return;
+    }
+
+    if (!confirm(`Are you sure you want to remove admin: ${adminEmail}?\n\nThis action cannot be undone.`)) {
       return;
     }
 
     try {
-      // This would require a new API endpoint to update admin status
-      alert('Admin status toggle not yet implemented');
+      const response = await fetch('/api/admin/users', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-admin-id': currentAdmin.id
+        },
+        body: JSON.stringify({ adminIdToDelete: adminId })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        alert('Admin removed successfully!');
+        fetchAdmins(currentAdmin.id);
+      } else {
+        alert(`Failed to remove admin: ${data.error || 'Unknown error'}`);
+      }
     } catch (error) {
-      console.error('Failed to toggle admin status:', error);
+      alert('Network error: Failed to remove admin');
+      console.error('Remove admin error:', error);
     }
   };
 
@@ -756,6 +777,7 @@ export default function AdminPage() {
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Login</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
@@ -787,6 +809,18 @@ export default function AdminPage() {
                         </td>
                         <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">
                           {new Date(admin.createdAt).toLocaleDateString()}
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap text-sm">
+                          {admin.id !== currentAdmin?.id ? (
+                            <button
+                              onClick={() => handleRemoveAdmin(admin.id, admin.email)}
+                              className="text-red-600 hover:text-red-800 font-medium hover:underline"
+                            >
+                              Remove
+                            </button>
+                          ) : (
+                            <span className="text-gray-400 text-xs">Current User</span>
+                          )}
                         </td>
                       </tr>
                     ))}

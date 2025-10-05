@@ -150,6 +150,7 @@ code {
 /* Utility classes */
 .text-balance {
   text-wrap: balance;
+  -webkit-text-wrap: balance;
 }
 
 .gradient-text {

@@ -138,3 +138,76 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+// Delete admin
+export async function DELETE(request: NextRequest) {
+  try {
+    const adminId = request.headers.get('x-admin-id');
+    const body = await request.json();
+    const { adminIdToDelete } = body;
+    
+    if (!adminId) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+    
+    if (!adminIdToDelete) {
+      return NextResponse.json(
+        { error: 'Admin ID to delete is required' },
+        { status: 400 }
+      );
+    }
+    
+    // Prevent self-deletion
+    if (adminId === adminIdToDelete) {
+      return NextResponse.json(
+        { error: 'Cannot delete yourself' },
+        { status: 400 }
+      );
+    }
+    
+    // Verify requester is super admin
+    const requester = await queryWithRetry(async (db) => await db`
+      SELECT is_super_admin, is_active FROM admin_users WHERE id = ${adminId}
+    `);
+    
+    if (requester.length === 0 || !requester[0].is_active || !requester[0].is_super_admin) {
+      return NextResponse.json(
+        { error: 'Forbidden - Super admin access required' },
+        { status: 403 }
+      );
+    }
+    
+    // Check if admin to delete exists
+    const adminToDelete = await queryWithRetry(async (db) => await db`
+      SELECT id, email FROM admin_users WHERE id = ${adminIdToDelete}
+    `);
+    
+    if (adminToDelete.length === 0) {
+      return NextResponse.json(
+        { error: 'Admin not found' },
+        { status: 404 }
+      );
+    }
+    
+    // Delete the admin
+    await queryWithRetry(async (db) => await db`
+      DELETE FROM admin_users WHERE id = ${adminIdToDelete}
+    `);
+    
+    return NextResponse.json({
+      success: true,
+      message: 'Admin deleted successfully',
+      deletedEmail: adminToDelete[0].email
+    });
+    
+  } catch (error) {
+    console.error('Delete admin error:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}

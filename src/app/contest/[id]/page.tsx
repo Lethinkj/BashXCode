@@ -28,6 +28,8 @@ export default function ContestPage({ params }: { params: Promise<{ id: string }
   const [timeUntilStart, setTimeUntilStart] = useState<string>('');
   const [tabSwitchCount, setTabSwitchCount] = useState(0);
   const [showTabWarning, setShowTabWarning] = useState(false);
+  const [screenshotCount, setScreenshotCount] = useState(0);
+  const [showScreenshotWarning, setShowScreenshotWarning] = useState(false);
 
   // Define fetch functions before useEffect hooks
   const fetchContest = useCallback(async () => {
@@ -154,6 +156,46 @@ export default function ContestPage({ params }: { params: Promise<{ id: string }
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [contestId, userId, userEmail]);
+
+  // Screenshot Detection
+  useEffect(() => {
+    const handleScreenshot = async (e: KeyboardEvent) => {
+      // Detect various screenshot shortcuts
+      const isPrintScreen = e.key === 'PrintScreen';
+      const isMacScreenshot = e.metaKey && e.shiftKey && (e.key === '3' || e.key === '4' || e.key === '5');
+      const isWindowsSnippingTool = (e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'S';
+      const isWindowsScreenshot = e.key === 'PrintScreen' && (e.shiftKey || e.metaKey);
+      
+      if (isPrintScreen || isMacScreenshot || isWindowsSnippingTool || isWindowsScreenshot) {
+        const newCount = screenshotCount + 1;
+        setScreenshotCount(newCount);
+        
+        // Log screenshot attempt
+        await fetch('/api/log-screenshot', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contestId,
+            userId,
+            userEmail,
+            userName,
+            timestamp: new Date().toISOString()
+          })
+        });
+        
+        setShowScreenshotWarning(true);
+        
+        // Auto-hide warning after 5 seconds
+        setTimeout(() => setShowScreenshotWarning(false), 5000);
+      }
+    };
+
+    document.addEventListener('keydown', handleScreenshot);
+    
+    return () => {
+      document.removeEventListener('keydown', handleScreenshot);
+    };
+  }, [contestId, userId, userEmail, userName, screenshotCount]);
 
   const handleSubmit = async () => {
     if (!selectedProblem || !contestId) return;
@@ -469,6 +511,20 @@ int main() {
           </div>
         </div>
       )}
+
+      {/* Screenshot Warning */}
+      {showScreenshotWarning && (
+        <div className="fixed top-40 right-4 z-50 bg-orange-500 text-white px-6 py-4 rounded-lg shadow-2xl animate-slide-up">
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">📸</span>
+            <div>
+              <p className="font-bold">Screenshot Detected!</p>
+              <p className="text-sm">{userName} - Screenshots are being monitored</p>
+              <p className="text-xs mt-1">Total screenshots: {screenshotCount}</p>
+            </div>
+          </div>
+        </div>
+      )}
       
       <nav className="bg-white/10 backdrop-blur-md border-b border-white/10 shadow-lg">
         <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8">
@@ -501,10 +557,10 @@ int main() {
         </div>
       </nav>
 
-      <div className="flex h-[calc(100vh-4rem)]">
+      <div className="flex flex-col lg:flex-row h-[calc(100vh-4rem)] overflow-hidden">
         {/* Problems Sidebar */}
-        <div className="w-64 bg-white/95 backdrop-blur-sm shadow-lg overflow-y-auto border-r border-gray-200">
-          <div className="p-4">
+        <div className="w-full lg:w-64 xl:w-72 bg-white/95 backdrop-blur-sm shadow-lg overflow-y-auto border-r border-gray-200 max-h-48 lg:max-h-full">
+          <div className="p-3 lg:p-4">
             <h3 className="font-bold text-lg mb-4 text-gray-900">📝 Problems</h3>
             {contest && Array.isArray(contest.problems) && contest.problems.map((problem) => {
               const userSubmissions = submissions.filter(s => s.problemId === problem.id);
@@ -532,10 +588,10 @@ int main() {
         </div>
 
         {/* Problem Description */}
-        <div className="w-1/3 bg-white border-r overflow-y-auto p-6">
+        <div className="w-full lg:w-1/3 xl:w-2/5 bg-white border-r overflow-y-auto p-4 lg:p-6 max-h-96 lg:max-h-full">
           {selectedProblem && (
             <>
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">{selectedProblem.title}</h2>
+              <h2 className="text-xl lg:text-2xl font-bold text-gray-900 mb-3 lg:mb-4">{selectedProblem.title}</h2>
               <div className="flex gap-2 mb-4">
                 <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
                   selectedProblem.difficulty === 'Easy' ? 'bg-green-100 text-green-800' :
@@ -616,13 +672,13 @@ int main() {
         </div>
 
         {/* Code Editor */}
-        <div className="flex-1 flex flex-col">
-          <div className="bg-white border-b p-4 flex justify-between items-center">
-            <div className="flex items-center gap-3">
+        <div className="flex-1 flex flex-col min-h-0">
+          <div className="bg-white border-b p-3 lg:p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+            <div className="flex items-center gap-2 lg:gap-3 flex-wrap">
               <select
                 value={language}
                 onChange={(e) => setLanguage(e.target.value)}
-                className="px-4 py-2 border rounded-lg text-gray-900"
+                className="px-3 py-2 lg:px-4 border rounded-lg text-gray-900 text-sm lg:text-base"
               >
                 <option value="python">Python</option>
                 <option value="javascript">JavaScript</option>
@@ -630,28 +686,28 @@ int main() {
                 <option value="cpp">C++</option>
                 <option value="c">C</option>
               </select>
-              <span className="text-sm text-gray-600 px-3 py-1 bg-gray-100 rounded-full">
+              <span className="text-xs lg:text-sm text-gray-600 px-2 lg:px-3 py-1 bg-gray-100 rounded-full">
                 🌐 API Mode
               </span>
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap w-full sm:w-auto">
               <button
                 onClick={handleRunCode}
-                className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700"
+                className="flex-1 sm:flex-none bg-green-600 text-white px-4 lg:px-6 py-2 rounded-lg hover:bg-green-700 text-sm lg:text-base transition-colors"
               >
                 Run Code
               </button>
               <button
                 onClick={handleTestAllCases}
                 disabled={testingAllCases}
-                className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                className="flex-1 sm:flex-none bg-blue-600 text-white px-4 lg:px-6 py-2 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-sm lg:text-base transition-colors"
               >
                 {testingAllCases ? 'Testing...' : 'Test All Cases'}
               </button>
               <button
                 onClick={handleSubmit}
                 disabled={!allTestsPassed || !contest || !isContestActive(contest.startTime, contest.endTime)}
-                className="bg-primary-600 text-white px-6 py-2 rounded-lg hover:bg-primary-700 disabled:bg-gray-400 disabled:cursor-not-allowed font-semibold"
+                className="flex-1 sm:flex-none bg-primary-600 text-white px-4 lg:px-6 py-2 rounded-lg hover:bg-primary-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-sm lg:text-base font-semibold transition-colors"
                 title={
                   !allTestsPassed
                     ? 'Click "Test All Cases" first and pass all tests'
@@ -665,9 +721,9 @@ int main() {
             </div>
           </div>
 
-          <div className="flex-1">
+          <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
             <Editor
-              height="60%"
+              height="55%"
               language={language === 'cpp' ? 'cpp' : language}
               value={code}
               onChange={(value) => setCode(value || '')}
@@ -695,20 +751,20 @@ int main() {
               }}
             />
             
-            <div className="h-[40%] border-t">
-              <div className="grid grid-cols-2 gap-4 p-4 h-full">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Test Input</label>
+            <div className="h-[45%] border-t flex-shrink-0 overflow-hidden">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 lg:gap-4 p-3 lg:p-4 h-full">
+                <div className="flex flex-col min-h-0">
+                  <label className="block text-xs lg:text-sm font-medium text-gray-700 mb-2">Test Input</label>
                   <textarea
                     value={testInput}
                     onChange={(e) => setTestInput(e.target.value)}
-                    className="w-full h-[calc(100%-2rem)] border rounded-lg p-2 font-mono text-sm text-gray-900"
+                    className="w-full flex-1 border rounded-lg p-2 font-mono text-xs lg:text-sm text-gray-900"
                     placeholder="Enter test input here..."
                   />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Output</label>
-                  <pre className="w-full h-[calc(100%-2rem)] border rounded-lg p-2 font-mono text-sm bg-gray-50 overflow-auto text-gray-900">
+                <div className="flex flex-col min-h-0">
+                  <label className="block text-xs lg:text-sm font-medium text-gray-700 mb-2">Output</label>
+                  <pre className="w-full flex-1 border rounded-lg p-2 font-mono text-xs lg:text-sm bg-gray-50 overflow-auto text-gray-900">
                     {testOutput || 'Output will appear here...'}
                   </pre>
                 </div>
