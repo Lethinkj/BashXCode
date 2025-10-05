@@ -23,6 +23,9 @@ export default function AdminLeaderboardPage({ params }: { params: Promise<{ id:
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [presentationMode, setPresentationMode] = useState(false);
+  const [banModalOpen, setBanModalOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<{ userId: string; userName: string } | null>(null);
+  const [banReason, setBanReason] = useState('');
 
   useEffect(() => {
     // Check if user is admin
@@ -82,6 +85,68 @@ export default function AdminLeaderboardPage({ params }: { params: Promise<{ id:
     return new Date(dateString).toLocaleTimeString();
   };
 
+  const handleBanClick = (userId: string, userName: string) => {
+    setSelectedUser({ userId, userName });
+    setBanReason('');
+    setBanModalOpen(true);
+  };
+
+  const handleBanUser = async () => {
+    if (!selectedUser || !banReason.trim()) return;
+
+    try {
+      const adminUser = JSON.parse(localStorage.getItem('adminUser') || '{}');
+      const response = await fetch('/api/ban-user', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-admin-id': adminUser.id
+        },
+        body: JSON.stringify({
+          contestId,
+          userId: selectedUser.userId,
+          reason: banReason.trim()
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to ban user');
+      }
+
+      setBanModalOpen(false);
+      setSelectedUser(null);
+      setBanReason('');
+      fetchData(); // Refresh leaderboard
+    } catch (error) {
+      console.error('Error banning user:', error);
+      alert('Failed to ban user');
+    }
+  };
+
+  const handleUnbanUser = async (userId: string) => {
+    if (!confirm('Are you sure you want to unban this user?')) return;
+
+    try {
+      const adminUser = JSON.parse(localStorage.getItem('adminUser') || '{}');
+      const response = await fetch(`/api/ban-user?contestId=${contestId}&userId=${userId}`, {
+        method: 'DELETE',
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-admin-id': adminUser.id
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to unban user');
+      }
+
+      fetchData(); // Refresh leaderboard
+    } catch (error) {
+      console.error('Error unbanning user:', error);
+      alert('Failed to unban user');
+    }
+  };
+
   if (!isAdmin) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-primary-950 to-gray-900">
@@ -98,7 +163,7 @@ export default function AdminLeaderboardPage({ params }: { params: Promise<{ id:
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center h-16">
               <Link href="/admin" className="flex items-center gap-3 text-xl font-bold text-white hover:text-primary-300 transition-colors">
-                <Logo size="sm" />
+                <Logo size="sm" noLink />
                 <span>{contest?.title} - Admin View</span>
               </Link>
               <div className="flex items-center gap-4">
@@ -181,7 +246,10 @@ export default function AdminLeaderboardPage({ params }: { params: Promise<{ id:
                     <th className="px-2 md:px-6 py-3 md:py-4 text-left font-bold text-gray-800 hidden sm:table-cell">Problems</th>
                     <th className="px-2 md:px-6 py-3 md:py-4 text-left font-bold text-gray-800 hidden md:table-cell">Last Sub.</th>
                     {!presentationMode && (
-                      <th className="px-2 md:px-6 py-3 md:py-4 text-left font-bold text-gray-800 hidden lg:table-cell">Switches</th>
+                      <>
+                        <th className="px-2 md:px-6 py-3 md:py-4 text-left font-bold text-gray-800 hidden lg:table-cell">Switches</th>
+                        <th className="px-2 md:px-6 py-3 md:py-4 text-left font-bold text-gray-800">Actions</th>
+                      </>
                     )}
                   </tr>
                 </thead>
@@ -208,12 +276,17 @@ export default function AdminLeaderboardPage({ params }: { params: Promise<{ id:
                           </div>
                         </td>
                         <td className="px-2 md:px-6 py-3 md:py-5">
-                          <div className={`font-bold text-gray-900 ${presentationMode ? 'text-base md:text-2xl' : 'text-sm md:text-lg'}`}>
-                            {entry.fullName}
+                          <div className="flex items-center gap-2">
+                            <div>
+                              <div className={`font-bold ${entry.isBanned ? 'text-red-600' : 'text-gray-900'} ${presentationMode ? 'text-base md:text-2xl' : 'text-sm md:text-lg'}`}>
+                                {entry.isBanned && <span className="mr-1">🚫</span>}
+                                {entry.fullName}
+                              </div>
+                              {!presentationMode && (
+                                <div className="text-xs md:text-sm text-gray-500 truncate max-w-[150px] md:max-w-none">{entry.email}</div>
+                              )}
+                            </div>
                           </div>
-                          {!presentationMode && (
-                            <div className="text-xs md:text-sm text-gray-500 truncate max-w-[150px] md:max-w-none">{entry.email}</div>
-                          )}
                         </td>
                         <td className="px-2 md:px-6 py-3 md:py-5 whitespace-nowrap">
                           <div className={`font-bold text-primary-600 ${presentationMode ? 'text-xl md:text-3xl' : 'text-lg md:text-2xl'}`}>
@@ -231,17 +304,36 @@ export default function AdminLeaderboardPage({ params }: { params: Promise<{ id:
                           </div>
                         </td>
                         {!presentationMode && (
-                          <td className="px-2 md:px-6 py-3 md:py-5 whitespace-nowrap hidden lg:table-cell">
-                            {tabSwitchLog && tabSwitchLog.switchCount > 0 ? (
-                              <div className="flex items-center gap-2">
-                                <span className="text-red-500 font-bold text-base md:text-lg">
-                                  ⚠️ {tabSwitchLog.switchCount}
-                                </span>
-                              </div>
-                            ) : (
-                              <span className="text-green-500 text-sm md:text-base">✓ None</span>
-                            )}
-                          </td>
+                          <>
+                            <td className="px-2 md:px-6 py-3 md:py-5 whitespace-nowrap hidden lg:table-cell">
+                              {tabSwitchLog && tabSwitchLog.switchCount > 0 ? (
+                                <div className="flex items-center gap-2">
+                                  <span className="text-red-500 font-bold text-base md:text-lg">
+                                    ⚠️ {tabSwitchLog.switchCount}
+                                  </span>
+                                </div>
+                              ) : (
+                                <span className="text-green-500 text-sm md:text-base">✓ None</span>
+                              )}
+                            </td>
+                            <td className="px-2 md:px-6 py-3 md:py-5 whitespace-nowrap">
+                              {entry.isBanned ? (
+                                <button
+                                  onClick={() => handleUnbanUser(entry.userId)}
+                                  className="px-3 py-1 bg-green-600 text-white text-xs md:text-sm rounded hover:bg-green-700 transition-colors font-semibold"
+                                >
+                                  Unban
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={() => handleBanClick(entry.userId, entry.fullName)}
+                                  className="px-3 py-1 bg-red-600 text-white text-xs md:text-sm rounded hover:bg-red-700 transition-colors font-semibold"
+                                >
+                                  Ban
+                                </button>
+                              )}
+                            </td>
+                          </>
                         )}
                       </tr>
                     );
@@ -304,6 +396,56 @@ export default function AdminLeaderboardPage({ params }: { params: Promise<{ id:
           </div>
         )}
       </div>
+
+      {/* Ban User Modal */}
+      {banModalOpen && selectedUser && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full shadow-2xl">
+            <h3 className="text-xl font-bold text-gray-900 mb-4">Ban User</h3>
+            <p className="text-gray-700 mb-4">
+              You are about to ban <span className="font-bold text-red-600">{selectedUser.userName}</span> from this contest.
+            </p>
+            <div className="bg-yellow-50 border-l-4 border-yellow-400 p-3 mb-4">
+              <p className="text-sm text-yellow-800">
+                <strong>Note:</strong> The user will receive a message: "Admin has banned you from this contest for violating rules."
+              </p>
+            </div>
+            <div className="mb-4">
+              <label htmlFor="banReason" className="block text-sm font-semibold text-gray-700 mb-2">
+                Reason for ban:
+              </label>
+              <textarea
+                id="banReason"
+                value={banReason}
+                onChange={(e) => setBanReason(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent text-gray-900 bg-white"
+                rows={3}
+                placeholder="Enter reason for ban..."
+                autoFocus
+              />
+            </div>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => {
+                  setBanModalOpen(false);
+                  setSelectedUser(null);
+                  setBanReason('');
+                }}
+                className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors font-semibold"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleBanUser}
+                disabled={!banReason.trim()}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Ban User
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

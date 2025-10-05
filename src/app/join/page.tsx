@@ -109,7 +109,7 @@ export default function JoinContestPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center gap-3">
-              <Logo size="sm" />
+              <Logo size="sm" noLink />
               <h1 className="text-2xl font-bold text-white">Aura-7F Contests</h1>
             </div>
             <div className="flex items-center gap-4">
@@ -117,6 +117,12 @@ export default function JoinContestPage() {
                 <span className="font-medium text-white">{user.fullName}</span>
                 <span className="ml-2 text-gray-300">({user.email})</span>
               </div>
+              <Link
+                href="/profile"
+                className="px-4 py-2 text-sm text-white bg-gray-700 hover:bg-gray-600 rounded-lg font-semibold transition-colors"
+              >
+                Profile
+              </Link>
               <button
                 onClick={handleLogout}
                 className="px-4 py-2 text-sm text-white bg-primary-600 hover:bg-primary-700 rounded-lg font-semibold transition-colors"

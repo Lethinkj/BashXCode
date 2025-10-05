@@ -5,9 +5,10 @@ interface LogoProps {
   className?: string;
   size?: 'sm' | 'md' | 'lg';
   showText?: boolean;
+  noLink?: boolean;
 }
 
-export default function Logo({ className = '', size = 'md', showText = true }: LogoProps) {
+export default function Logo({ className = '', size = 'md', showText = true, noLink = false }: LogoProps) {
   const sizes = {
     sm: 32,
     md: 48,
@@ -20,8 +21,8 @@ export default function Logo({ className = '', size = 'md', showText = true }: L
     lg: 'text-4xl',
   };
 
-  return (
-    <Link href="/" className={`flex items-center gap-3 hover:opacity-90 transition-opacity ${className}`}>
+  const content = (
+    <>
       <div className="relative" style={{ width: sizes[size], height: sizes[size] }}>
         <Image
           src="/logo.png"
@@ -37,6 +38,20 @@ export default function Logo({ className = '', size = 'md', showText = true }: L
           Aura-7F
         </span>
       )}
+    </>
+  );
+
+  if (noLink) {
+    return (
+      <div className={`flex items-center gap-3 ${className}`}>
+        {content}
+      </div>
+    );
+  }
+
+  return (
+    <Link href="/" className={`flex items-center gap-3 hover:opacity-90 transition-opacity ${className}`}>
+      {content}
     </Link>
   );
 }

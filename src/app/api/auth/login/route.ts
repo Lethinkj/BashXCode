@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
     
     // Find user with retry logic
     const result = await queryWithRetry(async (db) => await db`
-      SELECT id, email, password_hash, full_name, is_active FROM users WHERE email = ${email.toLowerCase()}
+      SELECT id, email, password_hash, full_name, is_active, must_change_password FROM users WHERE email = ${email.toLowerCase()}
     `);
     
     if (result.length === 0) {
@@ -45,6 +45,19 @@ export async function POST(request: NextRequest) {
         { error: 'Invalid email or password' },
         { status: 401 }
       );
+    }
+    
+    // Check if user must change password
+    if (user.must_change_password) {
+      return NextResponse.json({
+        success: true,
+        mustChangePassword: true,
+        user: {
+          id: user.id,
+          email: user.email,
+          fullName: user.full_name,
+        },
+      });
     }
     
     // Update last login

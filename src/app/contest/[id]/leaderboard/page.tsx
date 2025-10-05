@@ -53,7 +53,7 @@ export default function LeaderboardPage({ params }: { params: Promise<{ id: stri
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <Link href={`/contest/${contestId}`} className="flex items-center gap-3 text-xl font-bold text-white hover:text-primary-300 transition-colors">
-              <Logo size="sm" />
+              <Logo size="sm" noLink />
               <span>{contest?.title} - Leaderboard</span>
             </Link>
             <Link

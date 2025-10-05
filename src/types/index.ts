@@ -124,6 +124,7 @@ export interface LeaderboardEntry {
     points: number;
     time: string;
   }[];
+  isBanned?: boolean;
 }
 
 export interface CodeExecutionRequest {

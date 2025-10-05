@@ -284,12 +284,14 @@ export const leaderboardService = {
         COALESCE(ps.solved_problems, 0) as solved_problems,
         ps.last_submission_time,
         ps.first_submission_time,
-        COALESCE(ps.submissions, '[]'::json) as submissions
+        COALESCE(ps.submissions, '[]'::json) as submissions,
+        COALESCE(cp.is_banned, false) as is_banned
       FROM contest_participants cp
       JOIN users u ON cp.user_id = u.id
       LEFT JOIN participant_scores ps ON cp.user_id = ps.user_id
       WHERE cp.contest_id = ${contestId}
       ORDER BY 
+        COALESCE(cp.is_banned, false) ASC,
         COALESCE(ps.total_points, 0) DESC, 
         COALESCE(ps.solved_problems, 0) DESC, 
         ps.first_submission_time ASC NULLS LAST
@@ -302,7 +304,8 @@ export const leaderboardService = {
       totalPoints: parseInt(row.total_points) || 0,
       solvedProblems: parseInt(row.solved_problems) || 0,
       lastSubmissionTime: row.last_submission_time,
-      submissions: row.submissions
+      submissions: row.submissions,
+      isBanned: row.is_banned || false
     }));
   }
 };

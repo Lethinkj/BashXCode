@@ -9,6 +9,18 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { contestId, problemId, userId, code, language } = body;
     
+    // Check if user is banned from this contest
+    const sql = (await import('@/lib/db')).default;
+    const banCheck = await sql`
+      SELECT is_banned 
+      FROM contest_participants 
+      WHERE contest_id = ${contestId} AND user_id = ${userId}
+    `;
+    
+    if (banCheck.length > 0 && banCheck[0].is_banned) {
+      return NextResponse.json({ error: 'Admin has banned you from this contest for violating rules.' }, { status: 403 });
+    }
+    
     // Get contest and problem
     const contest = await contestStorage.getById(contestId);
     if (!contest) {

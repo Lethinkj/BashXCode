@@ -28,8 +28,6 @@ export default function ContestPage({ params }: { params: Promise<{ id: string }
   const [timeUntilStart, setTimeUntilStart] = useState<string>('');
   const [tabSwitchCount, setTabSwitchCount] = useState(0);
   const [showTabWarning, setShowTabWarning] = useState(false);
-  const [screenshotCount, setScreenshotCount] = useState(0);
-  const [showScreenshotWarning, setShowScreenshotWarning] = useState(false);
 
   // Define fetch functions before useEffect hooks
   const fetchContest = useCallback(async () => {
@@ -157,45 +155,7 @@ export default function ContestPage({ params }: { params: Promise<{ id: string }
     };
   }, [contestId, userId, userEmail]);
 
-  // Screenshot Detection
-  useEffect(() => {
-    const handleScreenshot = async (e: KeyboardEvent) => {
-      // Detect various screenshot shortcuts
-      const isPrintScreen = e.key === 'PrintScreen';
-      const isMacScreenshot = e.metaKey && e.shiftKey && (e.key === '3' || e.key === '4' || e.key === '5');
-      const isWindowsSnippingTool = (e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'S';
-      const isWindowsScreenshot = e.key === 'PrintScreen' && (e.shiftKey || e.metaKey);
-      
-      if (isPrintScreen || isMacScreenshot || isWindowsSnippingTool || isWindowsScreenshot) {
-        const newCount = screenshotCount + 1;
-        setScreenshotCount(newCount);
-        
-        // Log screenshot attempt
-        await fetch('/api/log-screenshot', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contestId,
-            userId,
-            userEmail,
-            userName,
-            timestamp: new Date().toISOString()
-          })
-        });
-        
-        setShowScreenshotWarning(true);
-        
-        // Auto-hide warning after 5 seconds
-        setTimeout(() => setShowScreenshotWarning(false), 5000);
-      }
-    };
 
-    document.addEventListener('keydown', handleScreenshot);
-    
-    return () => {
-      document.removeEventListener('keydown', handleScreenshot);
-    };
-  }, [contestId, userId, userEmail, userName, screenshotCount]);
 
   const handleSubmit = async () => {
     if (!selectedProblem || !contestId) return;
@@ -512,30 +472,18 @@ int main() {
         </div>
       )}
 
-      {/* Screenshot Warning */}
-      {showScreenshotWarning && (
-        <div className="fixed top-40 right-4 z-50 bg-orange-500 text-white px-6 py-4 rounded-lg shadow-2xl animate-slide-up">
-          <div className="flex items-center gap-3">
-            <span className="text-2xl">📸</span>
-            <div>
-              <p className="font-bold">Screenshot Detected!</p>
-              <p className="text-sm">{userName} - Screenshots are being monitored</p>
-              <p className="text-xs mt-1">Total screenshots: {screenshotCount}</p>
-            </div>
-          </div>
-        </div>
-      )}
+
       
       <nav className="bg-white/10 backdrop-blur-md border-b border-white/10 shadow-lg">
-        <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-full mx-auto px-2 sm:px-4 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <Link href="/join" className="flex items-center gap-3 text-xl font-bold text-white hover:text-primary-300 transition-colors">
-              <Logo size="sm" />
-              <span>{contest.title}</span>
+            <Link href="/join" className="flex items-center gap-2 sm:gap-3 text-sm sm:text-xl font-bold text-white hover:text-primary-300 transition-colors">
+              <Logo size="sm" noLink />
+              <span className="truncate max-w-[120px] sm:max-w-none">{contest.title}</span>
             </Link>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 sm:gap-4">
               {contest && (
-                <div className="text-sm">
+                <div className="text-xs sm:text-sm hidden md:block">
                   {isContestActive(contest.startTime, contest.endTime) ? (
                     <span className="text-green-400 font-semibold">⏰ {getTimeRemaining(contest.endTime)} remaining</span>
                   ) : hasContestEnded(contest.endTime) ? (
@@ -545,12 +493,19 @@ int main() {
                   )}
                 </div>
               )}
-              <span className="text-gray-200">{userEmail}</span>
+              <span className="text-gray-200 text-xs sm:text-sm hidden lg:inline truncate max-w-[150px]">{userEmail}</span>
+              <Link
+                href="/profile"
+                className="px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm text-white bg-gray-700 hover:bg-gray-600 rounded-lg font-semibold transition-colors hidden sm:inline-block"
+              >
+                Profile
+              </Link>
               <Link
                 href={`/contest/${contestId}/leaderboard`}
-                className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 font-semibold"
+                className="bg-primary-600 text-white px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm rounded-lg hover:bg-primary-700 font-semibold"
               >
-                🏆 Leaderboard
+                <span className="hidden sm:inline">🏆 Leaderboard</span>
+                <span className="sm:hidden">🏆</span>
               </Link>
             </div>
           </div>
@@ -559,7 +514,7 @@ int main() {
 
       <div className="flex flex-col lg:flex-row h-[calc(100vh-4rem)] overflow-hidden">
         {/* Problems Sidebar */}
-        <div className="w-full lg:w-64 xl:w-72 bg-white/95 backdrop-blur-sm shadow-lg overflow-y-auto border-r border-gray-200 max-h-48 lg:max-h-full">
+        <div className="w-full lg:w-64 xl:w-72 bg-white/95 backdrop-blur-sm shadow-lg overflow-y-auto border-r border-gray-200 lg:max-h-full">
           <div className="p-3 lg:p-4">
             <h3 className="font-bold text-lg mb-4 text-gray-900">📝 Problems</h3>
             {contest && Array.isArray(contest.problems) && contest.problems.map((problem) => {
@@ -588,7 +543,7 @@ int main() {
         </div>
 
         {/* Problem Description */}
-        <div className="w-full lg:w-1/3 xl:w-2/5 bg-white border-r overflow-y-auto p-4 lg:p-6 max-h-96 lg:max-h-full">
+        <div className="w-full lg:w-1/3 xl:w-2/5 bg-white border-r overflow-y-auto p-4 lg:p-6 lg:max-h-full">
           {selectedProblem && (
             <>
               <h2 className="text-xl lg:text-2xl font-bold text-gray-900 mb-3 lg:mb-4">{selectedProblem.title}</h2>

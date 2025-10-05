@@ -24,6 +24,7 @@ export default function AdminPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState('');
+  const [loading, setLoading] = useState(true);
   
   // Admin management state
   const [currentAdmin, setCurrentAdmin] = useState<any>(null);
@@ -43,13 +44,18 @@ export default function AdminPage() {
     if (loggedIn === 'true' && adminUser) {
       setIsAuthenticated(true);
       setCurrentAdmin(JSON.parse(adminUser));
-      fetchContests();
-      fetchAdmins(JSON.parse(adminUser).id);
+      const admin = JSON.parse(adminUser);
+      Promise.all([
+        fetchContests(),
+        fetchAdmins(admin.id)
+      ]).finally(() => setLoading(false));
+    } else {
+      setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    if (isAuthenticated && currentAdmin) {
+    if (isAuthenticated && currentAdmin && !loading) {
       fetchContests();
       fetchAdmins(currentAdmin.id);
     }
