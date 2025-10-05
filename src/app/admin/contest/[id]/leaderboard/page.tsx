@@ -246,11 +246,9 @@ export default function AdminLeaderboardPage({ params }: { params: Promise<{ id:
                     <th className="px-2 md:px-6 py-3 md:py-4 text-left font-bold text-gray-800">Points</th>
                     <th className="px-2 md:px-6 py-3 md:py-4 text-left font-bold text-gray-800 hidden sm:table-cell">Problems</th>
                     <th className="px-2 md:px-6 py-3 md:py-4 text-left font-bold text-gray-800 hidden md:table-cell">Last Sub.</th>
+                    <th className="px-2 md:px-6 py-3 md:py-4 text-left font-bold text-gray-800 hidden lg:table-cell">Switches</th>
                     {!presentationMode && (
-                      <>
-                        <th className="px-2 md:px-6 py-3 md:py-4 text-left font-bold text-gray-800 hidden lg:table-cell">Switches</th>
-                        <th className="px-2 md:px-6 py-3 md:py-4 text-left font-bold text-gray-800">Actions</th>
-                      </>
+                      <th className="px-2 md:px-6 py-3 md:py-4 text-left font-bold text-gray-800">Actions</th>
                     )}
                   </tr>
                 </thead>
@@ -304,37 +302,35 @@ export default function AdminLeaderboardPage({ params }: { params: Promise<{ id:
                             {formatTime(entry.lastSubmissionTime)}
                           </div>
                         </td>
+                        <td className="px-2 md:px-6 py-3 md:py-5 whitespace-nowrap hidden lg:table-cell">
+                          {tabSwitchLog && tabSwitchLog.switchCount > 0 ? (
+                            <div className="flex items-center gap-2">
+                              <span className={`text-red-500 font-bold ${presentationMode ? 'text-lg md:text-2xl' : 'text-base md:text-lg'}`}>
+                                ⚠️ {tabSwitchLog.switchCount}
+                              </span>
+                            </div>
+                          ) : (
+                            <span className={`text-green-500 ${presentationMode ? 'text-base md:text-xl' : 'text-sm md:text-base'}`}>✓ None</span>
+                          )}
+                        </td>
                         {!presentationMode && (
-                          <>
-                            <td className="px-2 md:px-6 py-3 md:py-5 whitespace-nowrap hidden lg:table-cell">
-                              {tabSwitchLog && tabSwitchLog.switchCount > 0 ? (
-                                <div className="flex items-center gap-2">
-                                  <span className="text-red-500 font-bold text-base md:text-lg">
-                                    ⚠️ {tabSwitchLog.switchCount}
-                                  </span>
-                                </div>
-                              ) : (
-                                <span className="text-green-500 text-sm md:text-base">✓ None</span>
-                              )}
-                            </td>
-                            <td className="px-2 md:px-6 py-3 md:py-5 whitespace-nowrap">
-                              {entry.isBanned ? (
-                                <button
-                                  onClick={() => handleUnbanUser(entry.userId)}
-                                  className="px-3 py-1 bg-green-600 text-white text-xs md:text-sm rounded hover:bg-green-700 transition-colors font-semibold"
-                                >
-                                  Unban
-                                </button>
-                              ) : (
-                                <button
-                                  onClick={() => handleBanClick(entry.userId, entry.fullName)}
-                                  className="px-3 py-1 bg-red-600 text-white text-xs md:text-sm rounded hover:bg-red-700 transition-colors font-semibold"
-                                >
-                                  Ban
-                                </button>
-                              )}
-                            </td>
-                          </>
+                          <td className="px-2 md:px-6 py-3 md:py-5 whitespace-nowrap">
+                            {entry.isBanned ? (
+                              <button
+                                onClick={() => handleUnbanUser(entry.userId)}
+                                className="px-3 py-1 bg-green-600 text-white text-xs md:text-sm rounded hover:bg-green-700 transition-colors font-semibold"
+                              >
+                                Unban
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => handleBanClick(entry.userId, entry.fullName)}
+                                className="px-3 py-1 bg-red-600 text-white text-xs md:text-sm rounded hover:bg-red-700 transition-colors font-semibold"
+                              >
+                                Ban
+                              </button>
+                            )}
+                          </td>
                         )}
                       </tr>
                     );

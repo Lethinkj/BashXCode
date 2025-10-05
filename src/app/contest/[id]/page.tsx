@@ -228,30 +228,32 @@ export default function ContestPage({ params }: { params: Promise<{ id: string }
         const allSubs = await submissionsResponse.json();
         const latestSub = allSubs.find((s: Submission) => s.id === result.id);
         
-        if (latestSub && latestSub.status === 'accepted' && latestSub.passedTestCases === latestSub.totalTestCases) {
-          // All tests passed! Show points notification
-          setNotification({
-            show: true,
-            type: 'success',
-            title: '✅ All Tests Passed!',
-            message: `Congratulations! You earned ${selectedProblem.points} points for solving "${selectedProblem.title}"! 🎊`
-          });
-          
-          // Auto-hide after 8 seconds
-          setTimeout(() => setNotification(prev => ({ ...prev, show: false })), 8000);
-        } else if (latestSub && latestSub.status !== 'accepted') {
-          // Some tests failed
-          setNotification({
-            show: true,
-            type: 'error',
-            title: '❌ Some Tests Failed',
-            message: `Your submission passed ${latestSub.passedTestCases}/${latestSub.totalTestCases} test cases. Keep trying!`
-          });
-          
-          // Auto-hide after 6 seconds
-          setTimeout(() => setNotification(prev => ({ ...prev, show: false })), 6000);
+        if (latestSub) {
+          if (latestSub.status === 'accepted' && latestSub.passedTestCases === latestSub.totalTestCases) {
+            // All tests passed! Show points notification
+            setNotification({
+              show: true,
+              type: 'success',
+              title: '✅ All Tests Passed!',
+              message: `Congratulations! You earned ${selectedProblem.points} points for solving "${selectedProblem.title}"! 🎊`
+            });
+            
+            // Auto-hide after 8 seconds
+            setTimeout(() => setNotification(prev => ({ ...prev, show: false })), 8000);
+          } else {
+            // Some tests failed or wrong answer
+            setNotification({
+              show: true,
+              type: 'error',
+              title: '❌ Some Tests Failed',
+              message: `Your submission passed ${latestSub.passedTestCases}/${latestSub.totalTestCases} test cases. Keep trying!`
+            });
+            
+            // Auto-hide after 6 seconds
+            setTimeout(() => setNotification(prev => ({ ...prev, show: false })), 6000);
+          }
         } else {
-          // Hide initial notification after 5 seconds
+          // Still processing or not found, hide initial notification
           setTimeout(() => setNotification(prev => ({ ...prev, show: false })), 5000);
         }
       }, 3000);
