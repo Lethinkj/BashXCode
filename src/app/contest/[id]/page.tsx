@@ -237,9 +237,65 @@ export default function ContestPage({ params }: { params: Promise<{ id: string }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [contest, contestId, userId, userEmail, userName]);
 
+  // Template generation function
+  const getLanguageTemplate = useCallback((lang: string, problem?: Problem | null) => {
+    // If we have a problem with test cases, generate smart template based on input pattern
+    if (problem && problem.testCases && problem.testCases.length > 0) {
+      return generateTemplate(lang, problem.testCases);
+    }
+    
+    // Fallback to basic templates if no test cases available
+    const templates: Record<string, string> = {
+      python: `# Write your solution here
+def solve():
+    n = int(input())
+    print(n)
+
+solve()`,
+      javascript: `// Write your solution here
+const readline = require('readline');
+const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout
+});
+
+rl.on('line', (input) => {
+    console.log(input);
+    rl.close();
+});`,
+      java: `import java.util.Scanner;
+
+public class Main {
+    public static void main(String[] args) {
+        Scanner sc = new Scanner(System.in);
+        int n = sc.nextInt();
+        System.out.println(n);
+    }
+}`,
+      cpp: `#include <iostream>
+using namespace std;
+
+int main() {
+    int n;
+    cin >> n;
+    cout << n << endl;
+    return 0;
+}`,
+      c: `#include <stdio.h>
+
+int main() {
+    int n;
+    scanf("%d", &n);
+    printf("%d\\n", n);
+    return 0;
+}`,
+    };
+    return templates[lang] || '';
+  }, []);
+
   // Track when user starts coding
   useEffect(() => {
-    if (code && !codingStartTime && code !== getLanguageTemplate(language)) {
+    if (code && !codingStartTime && code !== getLanguageTemplate(language, selectedProblem)) {
       const startTime = new Date().toISOString();
       setCodingStartTime(startTime);
       
@@ -257,7 +313,7 @@ export default function ContestPage({ params }: { params: Promise<{ id: string }
         }).catch(err => console.error('Failed to log coding start:', err));
       }
     }
-  }, [code, codingStartTime, language, contestId, userId, selectedProblem]);
+  }, [code, codingStartTime, language, contestId, userId, selectedProblem, getLanguageTemplate]);
 
 
   const handleSubmit = async () => {
@@ -492,61 +548,6 @@ export default function ContestPage({ params }: { params: Promise<{ id: string }
       setTestOutput(`❌ Network Error:\n${error.message || 'Failed to execute code'}`);
     }
   };
-
-  const getLanguageTemplate = useCallback((lang: string, problem?: Problem | null) => {
-    // If we have a problem with test cases, generate smart template based on input pattern
-    if (problem && problem.testCases && problem.testCases.length > 0) {
-      return generateTemplate(lang, problem.testCases);
-    }
-    
-    // Fallback to basic templates if no test cases available
-    const templates: Record<string, string> = {
-      python: `# Write your solution here
-def solve():
-    n = int(input())
-    print(n)
-
-solve()`,
-      javascript: `// Write your solution here
-const readline = require('readline');
-const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout
-});
-
-rl.on('line', (input) => {
-    console.log(input);
-    rl.close();
-});`,
-      java: `import java.util.Scanner;
-
-public class Main {
-    public static void main(String[] args) {
-        Scanner sc = new Scanner(System.in);
-        int n = sc.nextInt();
-        System.out.println(n);
-    }
-}`,
-      cpp: `#include <iostream>
-using namespace std;
-
-int main() {
-    int n;
-    cin >> n;
-    cout << n << endl;
-    return 0;
-}`,
-      c: `#include <stdio.h>
-
-int main() {
-    int n;
-    scanf("%d", &n);
-    printf("%d\\n", n);
-    return 0;
-}`,
-    };
-    return templates[lang] || '';
-  }, []);
 
   useEffect(() => {
     setCode(getLanguageTemplate(language, selectedProblem));
