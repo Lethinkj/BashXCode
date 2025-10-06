@@ -21,12 +21,18 @@ export default function Logo({ className = '', size = 'md', showText = true, noL
     lg: 'text-4xl',
   };
 
+  const xSizes = {
+    sm: 'text-2xl',
+    md: 'text-3xl',
+    lg: 'text-5xl',
+  };
+
   const content = (
     <>
       <div className="relative" style={{ width: sizes[size], height: sizes[size] }}>
         <Image
           src="/logo.png"
-          alt="Aura-7F Logo"
+          alt="Bash X Code Logo"
           width={sizes[size]}
           height={sizes[size]}
           className="object-contain"
@@ -34,9 +40,17 @@ export default function Logo({ className = '', size = 'md', showText = true, noL
         />
       </div>
       {showText && (
-        <span className={`font-display font-semibold ${textSizes[size]} gradient-text whitespace-nowrap`}>
-          Aura-7F
-        </span>
+        <div className="flex items-center gap-1">
+          <span className={`font-display font-bold ${textSizes[size]} gradient-text whitespace-nowrap`}>
+            Bash
+          </span>
+          <span className={`font-display font-black ${xSizes[size]} text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-600 mx-1 transform rotate-12`}>
+            X
+          </span>
+          <span className={`font-display font-bold ${textSizes[size]} gradient-text whitespace-nowrap`}>
+            Code
+          </span>
+        </div>
       )}
     </>
   );

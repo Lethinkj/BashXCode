@@ -172,11 +172,11 @@ export default function LoginPage() {
         {/* Header */}
         <div className="text-center mb-8">
           <div className="flex justify-center mb-4">
-            <Logo size="lg" showText={false} />
+            <Logo size="lg" />
           </div>
-          <h1 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-blue-600 mb-2">
-            Aura-7F
-          </h1>
+          <p className="text-lg font-semibold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-600 mb-2">
+            Code and Conquer
+          </p>
           <p className="text-gray-300">Welcome back! Sign in to continue</p>
         </div>
 

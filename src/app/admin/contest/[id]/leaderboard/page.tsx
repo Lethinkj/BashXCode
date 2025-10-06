@@ -86,6 +86,21 @@ export default function AdminLeaderboardPage({ params }: { params: Promise<{ id:
     return new Date(dateString).toLocaleTimeString();
   };
 
+  const formatSolveTime = (seconds: number) => {
+    if (!seconds) return 'N/A';
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    
+    if (hours > 0) {
+      return `${hours}h ${minutes}m ${secs}s`;
+    } else if (minutes > 0) {
+      return `${minutes}m ${secs}s`;
+    } else {
+      return `${secs}s`;
+    }
+  };
+
   const handleBanClick = (userId: string, userName: string) => {
     setSelectedUser({ userId, userName });
     setBanReason('');
@@ -245,6 +260,7 @@ export default function AdminLeaderboardPage({ params }: { params: Promise<{ id:
                     <th className="px-2 md:px-6 py-3 md:py-4 text-left font-bold text-gray-800">Participant</th>
                     <th className="px-2 md:px-6 py-3 md:py-4 text-left font-bold text-gray-800">Points</th>
                     <th className="px-2 md:px-6 py-3 md:py-4 text-left font-bold text-gray-800 hidden sm:table-cell">Problems</th>
+                    <th className="px-2 md:px-6 py-3 md:py-4 text-left font-bold text-gray-800 hidden md:table-cell">Time</th>
                     <th className="px-2 md:px-6 py-3 md:py-4 text-left font-bold text-gray-800 hidden md:table-cell">Last Sub.</th>
                     <th className="px-2 md:px-6 py-3 md:py-4 text-left font-bold text-gray-800 hidden lg:table-cell">Switches</th>
                     {!presentationMode && (
@@ -295,6 +311,11 @@ export default function AdminLeaderboardPage({ params }: { params: Promise<{ id:
                         <td className="px-2 md:px-6 py-3 md:py-5 whitespace-nowrap hidden sm:table-cell">
                           <div className={`text-gray-900 ${presentationMode ? 'text-base md:text-2xl' : 'text-sm md:text-lg'}`}>
                             {entry.solvedProblems} / {contest?.problems.length || 0}
+                          </div>
+                        </td>
+                        <td className="px-2 md:px-6 py-3 md:py-5 whitespace-nowrap hidden md:table-cell">
+                          <div className={`font-semibold text-blue-600 ${presentationMode ? 'text-base md:text-2xl' : 'text-sm md:text-lg'}`}>
+                            {formatSolveTime(entry.totalSolveTime || 0)}
                           </div>
                         </td>
                         <td className="px-2 md:px-6 py-3 md:py-5 whitespace-nowrap hidden md:table-cell">

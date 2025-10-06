@@ -49,14 +49,28 @@ export default function LeaderboardPage({ params }: { params: Promise<{ id: stri
     return new Date(dateString).toLocaleTimeString();
   };
 
+  const formatSolveTime = (seconds: number) => {
+    if (!seconds) return 'N/A';
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    
+    if (hours > 0) {
+      return `${hours}h ${minutes}m ${secs}s`;
+    } else if (minutes > 0) {
+      return `${minutes}m ${secs}s`;
+    } else {
+      return `${secs}s`;
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-primary-950 to-gray-900">
       <nav className="bg-white/10 backdrop-blur-md border-b border-white/10 shadow-lg">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <Link href={`/contest/${contestId}`} className="flex items-center gap-3 text-xl font-bold text-white hover:text-primary-300 transition-colors">
+            <Link href={`/contest/${contestId}`} className="flex items-center">
               <Logo size="sm" noLink />
-              <span>{contest?.title} - Leaderboard</span>
             </Link>
             <Link
               href={`/contest/${contestId}`}
@@ -101,6 +115,9 @@ export default function LeaderboardPage({ params }: { params: Promise<{ id: stri
                       Problems Solved
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                      Solve Time
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
                       Last Submission
                     </th>
                   </tr>
@@ -133,6 +150,11 @@ export default function LeaderboardPage({ params }: { params: Promise<{ id: stri
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-lg text-gray-900">
                           {entry.solvedProblems} / {(contest && Array.isArray(contest.problems)) ? contest.problems.length : 0}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-lg font-semibold text-blue-600">
+                          {formatSolveTime(entry.totalSolveTime || 0)}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">

@@ -68,11 +68,33 @@ export async function POST(request: NextRequest) {
         status = firstError.includes('Compilation') ? 'compilation_error' : 'runtime_error';
       }
       
+      // Calculate solve time if successful
+      let solveTimeSeconds = null;
+      if (allPassed) {
+        try {
+          const codingTimeResult = await sql`
+            SELECT start_time FROM coding_times 
+            WHERE contest_id = ${contestId} 
+            AND user_id = ${userId} 
+            AND problem_id = ${problemId}
+            LIMIT 1
+          `;
+          if (codingTimeResult.length > 0) {
+            const startTime = new Date(codingTimeResult[0].start_time);
+            const endTime = new Date();
+            solveTimeSeconds = Math.floor((endTime.getTime() - startTime.getTime()) / 1000);
+          }
+        } catch (err) {
+          console.error('Error calculating solve time:', err);
+        }
+      }
+      
       // Update submission
       await submissionStorage.update(created.id, {
         status,
         passedTestCases: result.passed,
         points: earnedPoints,
+        solveTimeSeconds: solveTimeSeconds ?? undefined,
         details: JSON.stringify(result.results) // Store detailed results
       });
     }).catch(error => {

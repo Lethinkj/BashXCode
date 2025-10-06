@@ -40,6 +40,8 @@ export default function ContestPage({ params }: { params: Promise<{ id: string }
   });
   const [showMobileSidebar, setShowMobileSidebar] = useState(false);
   const [showProblemDescription, setShowProblemDescription] = useState(false);
+  const [codingStartTime, setCodingStartTime] = useState<string | null>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   // Define fetch functions before useEffect hooks
   const fetchContest = useCallback(async () => {
@@ -99,6 +101,8 @@ export default function ContestPage({ params }: { params: Promise<{ id: string }
   useEffect(() => {
     if (!contest) return;
 
+    let hasStarted = false;
+
     const updateCountdown = () => {
       const now = new Date();
       const start = new Date(contest.startTime);
@@ -106,6 +110,18 @@ export default function ContestPage({ params }: { params: Promise<{ id: string }
 
       if (diff <= 0) {
         setTimeUntilStart('');
+        
+        // Show notification when contest just started
+        if (!hasStarted && isContestActive(contest.startTime, contest.endTime)) {
+          hasStarted = true;
+          setNotification({
+            show: true,
+            type: 'success',
+            title: '🎉 Contest Started!',
+            message: 'Click on the code editor to enter full-screen mode and start coding. Stay in full-screen to avoid violations!'
+          });
+          setTimeout(() => setNotification(prev => ({ ...prev, show: false })), 8000);
+        }
         return;
       }
 
@@ -175,6 +191,72 @@ export default function ContestPage({ params }: { params: Promise<{ id: string }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [contestId, userId, userEmail]);
 
+  // Fullscreen exit detection (no auto-enter to avoid permissions error)
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      const isCurrentlyFullscreen = !!document.fullscreenElement;
+      setIsFullscreen(isCurrentlyFullscreen);
+      
+      // If user exits fullscreen during active contest, treat as tab switch
+      if (!isCurrentlyFullscreen && contest && isContestActive(contest.startTime, contest.endTime) && contestId && userId) {
+        setTabSwitchCount(prev => {
+          const newCount = prev + 1;
+          // Log as tab switch
+          fetch('/api/log-tab-switch', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contestId,
+              userId,
+              userEmail,
+              userName,
+              timestamp: new Date().toISOString(),
+              switchCount: newCount
+            }),
+          }).catch(err => console.error('Failed to log fullscreen exit:', err));
+          return newCount;
+        });
+        
+        // Show warning
+        setNotification({
+          show: true,
+          type: 'warning',
+          title: '⚠️ Fullscreen Exit Detected!',
+          message: 'Warning: You exited fullscreen mode. Click the editor to re-enter fullscreen.'
+        });
+        setTimeout(() => setNotification(prev => ({ ...prev, show: false })), 5000);
+      }
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [contest, contestId, userId, userEmail, userName]);
+
+  // Track when user starts coding
+  useEffect(() => {
+    if (code && !codingStartTime && code !== getLanguageTemplate(language)) {
+      const startTime = new Date().toISOString();
+      setCodingStartTime(startTime);
+      
+      // Log coding start time to backend
+      if (contestId && userId && selectedProblem) {
+        fetch('/api/log-coding-start', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contestId,
+            userId,
+            problemId: selectedProblem.id,
+            startTime
+          }),
+        }).catch(err => console.error('Failed to log coding start:', err));
+      }
+    }
+  }, [code, codingStartTime, language, contestId, userId, selectedProblem]);
 
 
   const handleSubmit = async () => {
@@ -591,9 +673,8 @@ int main() {
       <nav className="bg-white/10 backdrop-blur-md border-b border-white/10 shadow-lg">
         <div className="max-w-full mx-auto px-2 sm:px-4 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <Link href="/join" className="flex items-center gap-2 sm:gap-3 text-sm sm:text-xl font-bold text-white hover:text-primary-300 transition-colors">
+            <Link href="/join" className="flex items-center gap-2 sm:gap-3">
               <Logo size="sm" noLink />
-              <span className="truncate max-w-[120px] sm:max-w-none">{contest.title}</span>
             </Link>
             <div className="flex items-center gap-2 sm:gap-4">
               {contest && (
@@ -678,6 +759,14 @@ int main() {
                     setSelectedProblem(problem);
                     setShowMobileSidebar(false);
                     setShowProblemDescription(false);
+                    // Reset code and coding start time when switching problems
+                    setCode(getLanguageTemplate(language));
+                    setCodingStartTime(null);
+                    setTestInput('');
+                    setTestOutput('');
+                    setAllTestsPassed(false);
+                    // Fetch submissions for this problem
+                    fetchSubmissions();
                   }}
                   className={`w-full text-left p-3 mb-2 rounded-lg transition ${
                     selectedProblem?.id === problem.id
@@ -942,7 +1031,23 @@ int main() {
           {/* Editor and I/O Section */}
           <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
             {/* Code Editor - Takes 60% on mobile, 55% on desktop */}
-            <div className="h-[60%] lg:h-[55%]">
+            <div className="h-[60%] lg:h-[55%]" onClick={async () => {
+              // Force full-screen when user clicks on editor
+              if (!document.fullscreenElement) {
+                try {
+                  await document.documentElement.requestFullscreen();
+                  setNotification({
+                    show: true,
+                    type: 'warning',
+                    title: '🔒 Full-Screen Required',
+                    message: 'You must stay in full-screen mode to write code. Exiting will be tracked as a violation.'
+                  });
+                  setTimeout(() => setNotification(prev => ({ ...prev, show: false })), 4000);
+                } catch (err) {
+                  console.error('Failed to enter fullscreen:', err);
+                }
+              }
+            }}>
               <Editor
                 height="100%"
                 language={language === 'cpp' ? 'cpp' : language}
@@ -955,12 +1060,28 @@ int main() {
                   lineNumbers: 'on',
                   scrollBeyondLastLine: false,
                   automaticLayout: true,
+                  readOnly: !document.fullscreenElement, // Make editor read-only if not in full-screen
                   // Disable copy-paste to prevent cheating
                   contextmenu: false,
                   quickSuggestions: false,
                   wordBasedSuggestions: 'off',
                 }}
                 onMount={(editor) => {
+                  // Add click handler to editor to enforce full-screen
+                  editor.onDidFocusEditorText(() => {
+                    if (!document.fullscreenElement) {
+                      document.documentElement.requestFullscreen().catch(err => {
+                        console.error('Failed to enter fullscreen:', err);
+                      });
+                    }
+                  });
+                  
+                  // Update editor readonly state based on fullscreen
+                  const updateReadOnly = () => {
+                    editor.updateOptions({ readOnly: !document.fullscreenElement });
+                  };
+                  document.addEventListener('fullscreenchange', updateReadOnly);
+                  
                   // Prevent copy, cut, and paste
                   editor.onKeyDown((e) => {
                     const isCopy = (e.ctrlKey || e.metaKey) && e.code === 'KeyC';

@@ -52,8 +52,8 @@ export default function Home() {
         <div className="absolute inset-0 bg-gradient-to-b from-primary-500/10 via-transparent to-transparent"></div>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-24 relative">
           <div className="text-center mb-20 animate-fade-in">
-            <h1 className="text-6xl md:text-7xl font-display font-bold mb-6 leading-tight">
-              Welcome to <span className="gradient-text">Aura-7F Contests</span>
+                        <h1 className="text-4xl sm:text-5xl lg:text-7xl font-display font-bold text-white mb-6 leading-tight">
+              Welcome to <span className="gradient-text">Bash X Code Contests</span>
             </h1>
             <p className="text-xl md:text-2xl text-gray-400 max-w-3xl mx-auto leading-relaxed">
               Modern competitive programming platform.<br />
@@ -176,7 +176,7 @@ export default function Home() {
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <Logo size="sm" showText={true} />
             <div className="text-center md:text-left text-gray-400 text-sm">
-              <p>&copy; 2025 Aura-7F. Modern competitive programming platform.</p>
+              <p>&copy; 2025 Bash X Code. Modern competitive programming platform.</p>
             </div>
           </div>
         </div>

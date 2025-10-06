@@ -22,8 +22,13 @@ const firaCode = Fira_Code({
 });
 
 export const metadata: Metadata = {
-  title: "Aura-7F Contest Platform",
-  description: "Modern competitive programming contest platform powered by Aura-7F",
+  title: "Bash X Code Contest Platform",
+  description: "Modern competitive programming contest platform powered by Bash X Code",
+  icons: {
+    icon: '/logo.png',
+    shortcut: '/logo.png',
+    apple: '/logo.png',
+  },
 };
 
 export default function RootLayout({

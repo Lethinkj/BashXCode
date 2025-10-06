@@ -215,7 +215,8 @@ export const submissionStorage = {
       status: submission.status ?? existing.status,
       passedTestCases: submission.passedTestCases ?? existing.passed_test_cases,
       points: submission.points ?? existing.points,
-      executionTime: submission.executionTime ?? existing.execution_time
+      executionTime: submission.executionTime ?? existing.execution_time,
+      solveTimeSeconds: submission.solveTimeSeconds ?? existing.solve_time_seconds
     };
     
     await sql`
@@ -224,7 +225,8 @@ export const submissionStorage = {
         status = ${updated.status},
         passed_test_cases = ${updated.passedTestCases},
         points = ${updated.points},
-        execution_time = ${updated.executionTime}
+        execution_time = ${updated.executionTime},
+        solve_time_seconds = ${updated.solveTimeSeconds}
       WHERE id = ${id}
     `;
     
@@ -240,7 +242,8 @@ export const submissionStorage = {
       totalTestCases: existing.total_test_cases,
       points: updated.points,
       submittedAt: existing.submitted_at,
-      executionTime: updated.executionTime ? parseFloat(updated.executionTime) : undefined
+      executionTime: updated.executionTime ? parseFloat(updated.executionTime) : undefined,
+      solveTimeSeconds: updated.solveTimeSeconds
     };
   }
 };
@@ -253,7 +256,8 @@ export const leaderboardService = {
           user_id,
           problem_id,
           points,
-          submitted_at
+          submitted_at,
+          solve_time_seconds
         FROM submissions
         WHERE contest_id = ${contestId} 
           AND status = 'accepted'
@@ -266,6 +270,7 @@ export const leaderboardService = {
           COALESCE(COUNT(DISTINCT bs.problem_id), 0) as solved_problems,
           MAX(bs.submitted_at) as last_submission_time,
           MIN(bs.submitted_at) as first_submission_time,
+          COALESCE(SUM(bs.solve_time_seconds), 0) as total_solve_time,
           json_agg(
             json_build_object(
               'problemId', bs.problem_id,
@@ -284,6 +289,7 @@ export const leaderboardService = {
         COALESCE(ps.solved_problems, 0) as solved_problems,
         ps.last_submission_time,
         ps.first_submission_time,
+        ps.total_solve_time,
         COALESCE(ps.submissions, '[]'::json) as submissions,
         COALESCE(cp.is_banned, false) as is_banned
       FROM contest_participants cp
@@ -293,7 +299,11 @@ export const leaderboardService = {
       ORDER BY 
         COALESCE(cp.is_banned, false) ASC,
         COALESCE(ps.total_points, 0) DESC, 
-        COALESCE(ps.solved_problems, 0) DESC, 
+        COALESCE(ps.solved_problems, 0) DESC,
+        CASE 
+          WHEN ps.total_solve_time IS NULL OR ps.total_solve_time = 0 THEN 999999999
+          ELSE ps.total_solve_time
+        END ASC,
         ps.first_submission_time ASC NULLS LAST
     `;
     
@@ -305,7 +315,8 @@ export const leaderboardService = {
       solvedProblems: parseInt(row.solved_problems) || 0,
       lastSubmissionTime: row.last_submission_time,
       submissions: row.submissions,
-      isBanned: row.is_banned || false
+      isBanned: row.is_banned || false,
+      totalSolveTime: parseInt(row.total_solve_time) || 0
     }));
   }
 };

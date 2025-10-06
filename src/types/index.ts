@@ -110,6 +110,7 @@ export interface Submission {
   submittedAt: string;
   executionTime?: number;
   details?: string;
+  solveTimeSeconds?: number; // Time taken to solve in seconds
 }
 
 export interface LeaderboardEntry {
@@ -125,6 +126,7 @@ export interface LeaderboardEntry {
     time: string;
   }[];
   isBanned?: boolean;
+  totalSolveTime?: number; // Total time in seconds to solve all problems
 }
 
 export interface CodeExecutionRequest {

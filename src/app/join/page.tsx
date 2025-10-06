@@ -110,7 +110,6 @@ export default function JoinContestPage() {
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
               <Logo size="sm" noLink />
-              <h1 className="text-base sm:text-xl lg:text-2xl font-bold text-white truncate">Aura-7F</h1>
             </div>
             <div className="flex items-center gap-1 sm:gap-2 lg:gap-4 flex-shrink-0">
               <div className="text-xs sm:text-sm hidden md:block max-w-[200px] truncate">

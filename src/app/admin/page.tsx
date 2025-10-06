@@ -396,7 +396,7 @@ export default function AdminPage() {
         <div className="bg-white/10 backdrop-blur-md border border-white/10 rounded-lg shadow-2xl p-6 md:p-8 max-w-md w-full">
           <div className="text-center mb-6 md:mb-8">
             <h1 className="text-2xl md:text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-blue-600 mb-2">Admin Login</h1>
-            <p className="text-gray-300 text-sm md:text-base">Aura-7F Contest Platform</p>
+            <p className="text-gray-300 text-sm md:text-base">Bash X Code - Contest Platform</p>
           </div>
 
           <form onSubmit={handleLogin} className="space-y-4 md:space-y-6">
@@ -458,7 +458,7 @@ export default function AdminPage() {
         <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <Link href="/" className="text-base sm:text-lg lg:text-2xl font-bold text-white truncate flex-1 min-w-0 mr-2">
-              Aura-7F - Admin
+              Bash X Code - Admin
             </Link>
             <div className="flex items-center gap-1 sm:gap-2 lg:gap-4 flex-shrink-0">
               <span className="text-white text-xs sm:text-sm hidden md:inline truncate max-w-[150px]">👤 {currentAdmin?.fullName || 'Admin'}</span>
