@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Contest, Problem, Submission } from '@/types';
 import { getAuthToken, isContestActive, hasContestStarted, hasContestEnded, getTimeRemaining } from '@/lib/auth';
+import { generateTemplate, getInputFormatDescription } from '@/lib/codeTemplates';
 import dynamic from 'next/dynamic';
 import Logo from '@/components/Logo';
 
@@ -492,7 +493,13 @@ export default function ContestPage({ params }: { params: Promise<{ id: string }
     }
   };
 
-  const getLanguageTemplate = (lang: string) => {
+  const getLanguageTemplate = useCallback((lang: string, problem?: Problem | null) => {
+    // If we have a problem with test cases, generate smart template based on input pattern
+    if (problem && problem.testCases && problem.testCases.length > 0) {
+      return generateTemplate(lang, problem.testCases);
+    }
+    
+    // Fallback to basic templates if no test cases available
     const templates: Record<string, string> = {
       python: `# Write your solution here
 def solve():
@@ -539,11 +546,11 @@ int main() {
 }`,
     };
     return templates[lang] || '';
-  };
+  }, []);
 
   useEffect(() => {
-    setCode(getLanguageTemplate(language));
-  }, [language]);
+    setCode(getLanguageTemplate(language, selectedProblem));
+  }, [language, selectedProblem, getLanguageTemplate]);
 
   if (!contest) {
     return (
@@ -760,7 +767,7 @@ int main() {
                     setShowMobileSidebar(false);
                     setShowProblemDescription(false);
                     // Reset code and coding start time when switching problems
-                    setCode(getLanguageTemplate(language));
+                    setCode(getLanguageTemplate(language, problem));
                     setCodingStartTime(null);
                     setTestInput('');
                     setTestOutput('');
@@ -856,6 +863,17 @@ int main() {
                       <p className="whitespace-pre-wrap">{selectedProblem.description}</p>
                     </div>
                     
+                    {/* Input Format Guide */}
+                    <div className="mt-6 bg-blue-50 border-l-4 border-blue-500 p-4 rounded">
+                      <h3 className="font-semibold text-blue-900 mb-2">📥 Input Format</h3>
+                      <p className="text-sm text-blue-800">
+                        {getInputFormatDescription(selectedProblem.testCases)}
+                      </p>
+                      <p className="text-xs text-blue-700 mt-2 italic">
+                        💡 Tip: Your starter code template is already configured to read this format correctly!
+                      </p>
+                    </div>
+                    
                     <div className="mt-6">
                       <h3 className="font-bold text-lg mb-2 text-gray-900">Sample Test Case</h3>
                       {selectedProblem.testCases.slice(0, 1).map((tc) => (
@@ -901,6 +919,17 @@ int main() {
               </div>
               <div className="prose max-w-none text-gray-700">
                 <p className="whitespace-pre-wrap">{selectedProblem.description}</p>
+              </div>
+              
+              {/* Input Format Guide */}
+              <div className="mt-6 bg-blue-50 border-l-4 border-blue-500 p-4 rounded">
+                <h3 className="font-semibold text-blue-900 mb-2">📥 Input Format</h3>
+                <p className="text-sm text-blue-800">
+                  {getInputFormatDescription(selectedProblem.testCases)}
+                </p>
+                <p className="text-xs text-blue-700 mt-2 italic">
+                  💡 Tip: Your starter code template is already configured to read this format correctly!
+                </p>
               </div>
               
               <div className="mt-6">
