@@ -55,14 +55,41 @@ export async function POST(request: NextRequest) {
       language,
       problem.testCases.map(tc => ({ input: tc.input, expectedOutput: tc.expectedOutput }))
     ).then(async (result) => {
-      // Award points ONLY if ALL test cases pass
+      // Award points based on test cases passed
       const allPassed = result.passed === result.total;
-      const earnedPoints = allPassed ? problem.points : 0;
+      const partialPassed = result.passed >= 2 && result.passed < result.total;
+      
+      // Calculate points:
+      // - All tests pass: 100% points
+      // - ≥2 tests pass: 50% points (partial credit)
+      // - <2 tests pass: 0 points
+      let earnedPoints = 0;
+      if (allPassed) {
+        earnedPoints = problem.points;
+      } else if (partialPassed) {
+        earnedPoints = Math.floor(problem.points * 0.5); // 50% partial credit
+      }
+      
+      // Check if user already has a submission for this problem
+      // If previous submission was partial and this is full, update points
+      try {
+        const previousSubmissions = await submissionStorage.getByUserAndContest(userId, contestId);
+        const previousForProblem = previousSubmissions.filter(s => s.problemId === problemId && s.id !== created.id);
+        
+        // If user had partial credit before and now has full pass, they get full points
+        if (allPassed && previousForProblem.some(s => s.points > 0 && s.points < problem.points)) {
+          console.log(`User ${userId} upgraded from partial to full solution for problem ${problemId}`);
+        }
+      } catch (err) {
+        console.error('Error checking previous submissions:', err);
+      }
       
       // Determine status with proper typing
-      let status: 'accepted' | 'wrong_answer' | 'compilation_error' | 'runtime_error' = 'wrong_answer';
+      let status: 'accepted' | 'partial' | 'wrong_answer' | 'compilation_error' | 'runtime_error' = 'wrong_answer';
       if (allPassed) {
         status = 'accepted';
+      } else if (partialPassed) {
+        status = 'partial'; // New status for partial credit
       } else if (result.results.some(r => r.error)) {
         const firstError = result.results.find(r => r.error)?.error || '';
         status = firstError.includes('Compilation') ? 'compilation_error' : 'runtime_error';

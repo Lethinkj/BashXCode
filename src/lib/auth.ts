@@ -97,6 +97,34 @@ export function isAuthenticated(): boolean {
 }
 
 /**
+ * Check if current user is an admin (for test mode)
+ */
+export function isAdminUser(): boolean {
+  if (typeof window === 'undefined') return false;
+  
+  try {
+    const adminUser = localStorage.getItem('adminUser');
+    return adminUser !== null;
+  } catch (error) {
+    return false;
+  }
+}
+
+/**
+ * Get admin user details
+ */
+export function getAdminUser(): any | null {
+  if (typeof window === 'undefined') return null;
+  
+  try {
+    const adminUser = localStorage.getItem('adminUser');
+    return adminUser ? JSON.parse(adminUser) : null;
+  } catch (error) {
+    return null;
+  }
+}
+
+/**
  * Generate a simple contest code from title
  */
 export function generateContestCode(title: string): string {

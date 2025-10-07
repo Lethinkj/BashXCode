@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Contest, Problem, Submission } from '@/types';
-import { getAuthToken, isContestActive, hasContestStarted, hasContestEnded, getTimeRemaining } from '@/lib/auth';
+import { getAuthToken, isContestActive, hasContestStarted, hasContestEnded, getTimeRemaining, isAdminUser } from '@/lib/auth';
 import { generateTemplate, getInputFormatDescription } from '@/lib/codeTemplates';
 import dynamic from 'next/dynamic';
 import Logo from '@/components/Logo';
@@ -43,6 +43,9 @@ export default function ContestPage({ params }: { params: Promise<{ id: string }
   const [showProblemDescription, setShowProblemDescription] = useState(false);
   const [codingStartTime, setCodingStartTime] = useState<string | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [showSubmissionsModal, setShowSubmissionsModal] = useState(false);
+  const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
+  const [isAdminTestMode, setIsAdminTestMode] = useState(false);
 
   // Define fetch functions before useEffect hooks
   const fetchContest = useCallback(async () => {
@@ -83,6 +86,9 @@ export default function ContestPage({ params }: { params: Promise<{ id: string }
       setUserId(user.id);
       setUserEmail(user.email);
       setUserName(user.fullName);
+      
+      // Check if user is admin (test mode)
+      setIsAdminTestMode(isAdminUser());
     });
   }, [params, router]);
 
@@ -146,8 +152,11 @@ export default function ContestPage({ params }: { params: Promise<{ id: string }
     return () => clearInterval(interval);
   }, [contest]);
 
-  // Tab switch detection
+  // Tab switch detection (skip for admins in test mode)
   useEffect(() => {
+    // Don't track tab switches for admins in test mode
+    if (isAdminTestMode) return;
+    
     const handleVisibilityChange = () => {
       if (document.hidden) {
         // User switched away from tab
@@ -190,10 +199,13 @@ export default function ContestPage({ params }: { params: Promise<{ id: string }
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [contestId, userId, userEmail]);
+  }, [contestId, userId, userEmail, isAdminTestMode]);
 
-  // Fullscreen exit detection (no auto-enter to avoid permissions error)
+  // Fullscreen exit detection (skip for admins in test mode)
   useEffect(() => {
+    // Don't track fullscreen exits for admins in test mode
+    if (isAdminTestMode) return;
+    
     const handleFullscreenChange = () => {
       const isCurrentlyFullscreen = !!document.fullscreenElement;
       setIsFullscreen(isCurrentlyFullscreen);
@@ -235,7 +247,7 @@ export default function ContestPage({ params }: { params: Promise<{ id: string }
       document.removeEventListener('fullscreenchange', handleFullscreenChange);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [contest, contestId, userId, userEmail, userName]);
+  }, [contest, contestId, userId, userEmail, userName, isAdminTestMode]);
 
   // Template generation function
   const getLanguageTemplate = useCallback((lang: string, problem?: Problem | null) => {
@@ -395,6 +407,21 @@ int main() {
             
             // Auto-hide after 8 seconds
             setTimeout(() => setNotification(prev => ({ ...prev, show: false })), 8000);
+          } else if (latestSub.status === 'partial') {
+            // Partial credit! Some tests passed
+            const passedCount = latestSub.passedTestCases || 0;
+            const totalCount = latestSub.totalTestCases || selectedProblem.testCases.length;
+            const partialPoints = latestSub.points || 0;
+            
+            setNotification({
+              show: true,
+              type: 'warning',
+              title: '⚠️ Partial Credit!',
+              message: `Your solution passed ${passedCount}/${totalCount} test cases and earned ${partialPoints} points (50%). Fix remaining cases to get full ${selectedProblem.points} points!`
+            });
+            
+            // Auto-hide after 8 seconds
+            setTimeout(() => setNotification(prev => ({ ...prev, show: false })), 8000);
           } else if (latestSub.status === 'running') {
             // Still running after max attempts
             setNotification({
@@ -409,11 +436,14 @@ int main() {
             const passedCount = latestSub.passedTestCases || 0;
             const totalCount = latestSub.totalTestCases || selectedProblem.testCases.length;
             
+            // Check if they're close to partial credit
+            const closeMessage = passedCount === 1 ? ' You need at least 2 test cases to pass for partial credit (50% points).' : '';
+            
             setNotification({
               show: true,
               type: 'error',
               title: '❌ Some Tests Failed',
-              message: `Your submission passed ${passedCount}/${totalCount} test cases. Keep trying!`
+              message: `Your submission passed ${passedCount}/${totalCount} test cases.${closeMessage} Keep trying!`
             });
             
             // Auto-hide after 6 seconds
@@ -676,7 +706,18 @@ int main() {
         </div>
       )}
 
-
+      {/* Admin Test Mode Banner */}
+      {isAdminTestMode && (
+        <div className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-4 py-3 text-center shadow-lg">
+          <div className="flex items-center justify-center gap-2">
+            <span className="text-xl">🧪</span>
+            <p className="font-semibold text-sm sm:text-base">
+              ADMIN TEST MODE - Your submissions won&apos;t appear in leaderboard or affect scoring
+            </p>
+            <span className="text-xl">🧪</span>
+          </div>
+        </div>
+      )}
       
       <nav className="bg-white/10 backdrop-blur-md border-b border-white/10 shadow-lg">
         <div className="max-w-full mx-auto px-2 sm:px-4 lg:px-8">
@@ -963,11 +1004,13 @@ int main() {
                         <div className="flex justify-between items-start mb-2">
                           <span className={`px-2 py-1 rounded text-xs font-semibold ${
                             sub.status === 'accepted' ? 'bg-green-100 text-green-800' :
+                            sub.status === 'partial' ? 'bg-yellow-100 text-yellow-800' :
                             sub.status === 'running' ? 'bg-blue-100 text-blue-800' :
                             sub.status === 'compilation_error' || sub.status === 'compile_error' ? 'bg-orange-100 text-orange-800' :
                             'bg-red-100 text-red-800'
                           }`}>
                             {sub.status === 'accepted' ? '✓ Accepted' :
+                             sub.status === 'partial' ? '◐ Partial (50%)' :
                              sub.status === 'running' ? '⟳ Running' :
                              sub.status === 'compilation_error' || sub.status === 'compile_error' ? '⚠ Compilation Error' :
                              sub.status === 'runtime_error' ? '✗ Runtime Error' :
@@ -983,9 +1026,21 @@ int main() {
                         </div>
                         <div className="text-sm text-gray-700">
                           <span className="font-semibold">Points:</span> {sub.points}/{selectedProblem.points}
+                          {sub.status === 'partial' && <span className="text-yellow-600 ml-2">⚠ Can improve to {selectedProblem.points}!</span>}
                         </div>
-                        <div className="text-xs text-gray-500 mt-1">
-                          {sub.language.toUpperCase()}
+                        <div className="flex items-center justify-between mt-2">
+                          <div className="text-xs text-gray-500">
+                            {sub.language.toUpperCase()}
+                          </div>
+                          <button
+                            onClick={() => {
+                              setSelectedSubmission(sub);
+                              setShowSubmissionsModal(true);
+                            }}
+                            className="text-xs text-blue-600 hover:text-blue-800 font-semibold"
+                          >
+                            View Code →
+                          </button>
                         </div>
                       </div>
                     ))}
@@ -1157,6 +1212,148 @@ int main() {
           </div>
         </div>
       </div>
+
+      {/* Submission Code View Modal */}
+      {showSubmissionsModal && selectedSubmission && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+            {/* Modal Header */}
+            <div className="p-4 border-b flex justify-between items-center">
+              <div>
+                <h3 className="text-lg font-bold text-gray-900">Submission Details</h3>
+                <p className="text-sm text-gray-500">
+                  Submitted at {new Date(selectedSubmission.submittedAt).toLocaleString()}
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  setShowSubmissionsModal(false);
+                  setSelectedSubmission(null);
+                }}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-4 overflow-y-auto flex-1">
+              {/* Status and Stats */}
+              <div className="mb-4 grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div className="bg-gray-50 p-3 rounded-lg">
+                  <p className="text-xs text-gray-600">Status</p>
+                  <p className={`text-sm font-semibold ${
+                    selectedSubmission.status === 'accepted' ? 'text-green-600' :
+                    selectedSubmission.status === 'partial' ? 'text-yellow-600' :
+                    'text-red-600'
+                  }`}>
+                    {selectedSubmission.status === 'accepted' ? '✓ Accepted' :
+                     selectedSubmission.status === 'partial' ? '◐ Partial' :
+                     selectedSubmission.status === 'compilation_error' || selectedSubmission.status === 'compile_error' ? '⚠ Compilation Error' :
+                     selectedSubmission.status === 'runtime_error' ? '✗ Runtime Error' :
+                     selectedSubmission.status === 'wrong_answer' ? '✗ Wrong Answer' :
+                     selectedSubmission.status === 'time_limit' ? '⏱ Time Limit' : '✗ Error'}
+                  </p>
+                </div>
+                <div className="bg-gray-50 p-3 rounded-lg">
+                  <p className="text-xs text-gray-600">Test Cases</p>
+                  <p className="text-sm font-semibold text-gray-900">
+                    {selectedSubmission.passedTestCases}/{selectedSubmission.totalTestCases} passed
+                  </p>
+                </div>
+                <div className="bg-gray-50 p-3 rounded-lg">
+                  <p className="text-xs text-gray-600">Points Earned</p>
+                  <p className="text-sm font-semibold text-gray-900">
+                    {selectedSubmission.points} {selectedSubmission.status === 'partial' && '(50%)'}
+                  </p>
+                </div>
+                <div className="bg-gray-50 p-3 rounded-lg">
+                  <p className="text-xs text-gray-600">Language</p>
+                  <p className="text-sm font-semibold text-gray-900">
+                    {selectedSubmission.language.toUpperCase()}
+                  </p>
+                </div>
+              </div>
+
+              {/* Improvement Message for Partial */}
+              {selectedSubmission.status === 'partial' && (
+                <div className="mb-4 bg-yellow-50 border-l-4 border-yellow-400 p-4">
+                  <p className="text-sm text-yellow-800">
+                    💡 <strong>You can still improve!</strong> Your solution passed {selectedSubmission.passedTestCases}/{selectedSubmission.totalTestCases} test cases.
+                    Fix the remaining cases to earn full points ({selectedProblem?.points || 0} points instead of {selectedSubmission.points}).
+                  </p>
+                </div>
+              )}
+
+              {/* Code Display */}
+              <div className="bg-gray-900 rounded-lg overflow-hidden">
+                <div className="bg-gray-800 px-4 py-2 flex items-center justify-between">
+                  <span className="text-sm text-gray-300 font-mono">
+                    {selectedSubmission.language === 'python' ? 'solution.py' :
+                     selectedSubmission.language === 'javascript' ? 'solution.js' :
+                     selectedSubmission.language === 'java' ? 'Solution.java' :
+                     selectedSubmission.language === 'cpp' ? 'solution.cpp' :
+                     selectedSubmission.language === 'c' ? 'solution.c' : 'solution.txt'}
+                  </span>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(selectedSubmission.code);
+                      setNotification({
+                        show: true,
+                        type: 'success',
+                        title: '✓ Copied!',
+                        message: 'Code copied to clipboard'
+                      });
+                      setTimeout(() => setNotification(prev => ({ ...prev, show: false })), 2000);
+                    }}
+                    className="text-xs text-blue-400 hover:text-blue-300"
+                  >
+                    📋 Copy Code
+                  </button>
+                </div>
+                <pre className="p-4 overflow-x-auto text-sm">
+                  <code className="text-gray-100 font-mono">
+                    {selectedSubmission.code}
+                  </code>
+                </pre>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 border-t flex justify-end gap-2">
+              <button
+                onClick={() => {
+                  setCode(selectedSubmission.code);
+                  setLanguage(selectedSubmission.language);
+                  setShowSubmissionsModal(false);
+                  setSelectedSubmission(null);
+                  setNotification({
+                    show: true,
+                    type: 'success',
+                    title: '✓ Code Loaded',
+                    message: 'Previous submission loaded into editor'
+                  });
+                  setTimeout(() => setNotification(prev => ({ ...prev, show: false })), 3000);
+                }}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-semibold"
+              >
+                Load into Editor
+              </button>
+              <button
+                onClick={() => {
+                  setShowSubmissionsModal(false);
+                  setSelectedSubmission(null);
+                }}
+                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 text-sm font-semibold"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

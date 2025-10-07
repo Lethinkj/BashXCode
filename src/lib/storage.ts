@@ -296,6 +296,9 @@ export const leaderboardService = {
       JOIN users u ON cp.user_id = u.id
       LEFT JOIN participant_scores ps ON cp.user_id = ps.user_id
       WHERE cp.contest_id = ${contestId}
+        AND NOT EXISTS (
+          SELECT 1 FROM admin_users au WHERE au.email = u.email
+        )
       ORDER BY 
         COALESCE(cp.is_banned, false) ASC,
         COALESCE(ps.total_points, 0) DESC, 

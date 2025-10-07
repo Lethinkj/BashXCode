@@ -13,19 +13,22 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Fetch all tab switches for the contest
+    // Fetch all tab switches for the contest (exclude admins)
     // If table doesn't exist, return empty array instead of crashing
     try {
       const tabSwitches = await sql`
         SELECT 
-          user_id as "userId",
-          user_email as "userEmail",
-          COALESCE(user_name, user_email) as "userName",
-          switch_count as "switchCount",
-          last_switch_time as "lastSwitchTime"
-        FROM tab_switches
-        WHERE contest_id = ${contestId}
-        ORDER BY switch_count DESC
+          ts.user_id as "userId",
+          ts.user_email as "userEmail",
+          COALESCE(ts.user_name, ts.user_email) as "userName",
+          ts.switch_count as "switchCount",
+          ts.last_switch_time as "lastSwitchTime"
+        FROM tab_switches ts
+        WHERE ts.contest_id = ${contestId}
+          AND NOT EXISTS (
+            SELECT 1 FROM admin_users au WHERE au.email = ts.user_email
+          )
+        ORDER BY ts.switch_count DESC
       `;
 
       return NextResponse.json(tabSwitches);

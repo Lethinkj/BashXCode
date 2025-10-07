@@ -103,7 +103,7 @@ export interface Submission {
   userId: string; // CHANGED: from userName to userId
   code: string;
   language: string;
-  status: 'pending' | 'running' | 'accepted' | 'wrong_answer' | 'time_limit' | 'runtime_error' | 'compile_error' | 'compilation_error' | 'error';
+  status: 'pending' | 'running' | 'accepted' | 'partial' | 'wrong_answer' | 'time_limit' | 'runtime_error' | 'compile_error' | 'compilation_error' | 'error';
   passedTestCases: number;
   totalTestCases: number;
   points: number;

@@ -310,6 +310,47 @@ export default function AdminPage() {
     alert(`Contest code "${contestCode}" copied to clipboard!`);
   };
 
+  const handleTakeTest = async (contestId: string) => {
+    try {
+      if (!currentAdmin || !currentAdmin.email) {
+        alert('Admin user not found. Please log in again.');
+        return;
+      }
+
+      // Join contest as admin
+      const response = await fetch('/api/admin/join-contest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contestId,
+          adminEmail: currentAdmin.email
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.user) {
+        // Set up regular user auth token for contest access
+        const authUser = {
+          id: data.user.id,
+          email: data.user.email,
+          fullName: data.user.fullName
+        };
+        
+        localStorage.setItem('authUser', JSON.stringify(authUser));
+        localStorage.setItem('authTime', Date.now().toString());
+        
+        // Open contest in new tab
+        window.open(`/contest/${contestId}`, '_blank');
+      } else {
+        alert(`Failed to join contest: ${data.error || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('Take test error:', error);
+      alert('Failed to start test. Please try again.');
+    }
+  };
+
   const handleDeleteContest = async (contestId: string, title: string) => {
     const confirmed = confirm(
       `Are you sure you want to delete the contest "${title}"?\n\n` +
@@ -683,25 +724,31 @@ export default function AdminPage() {
                   </button>
                 </div>
                 
-                {/* Action Buttons - Stacked on mobile */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                {/* Action Buttons - Grid layout */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
                   <button
                     onClick={() => copyContestUrl(contest.id)}
                     className="bg-blue-600 text-white px-3 sm:px-4 py-2 rounded-lg hover:bg-blue-700 text-xs sm:text-sm w-full"
                   >
-                    Copy URL
+                    📋 Copy URL
                   </button>
                   <Link
                     href={`/admin/contest/${contest.id}/leaderboard`}
                     className="bg-green-600 text-white px-3 sm:px-4 py-2 rounded-lg hover:bg-green-700 text-xs sm:text-sm flex items-center justify-center w-full"
                   >
-                    📊 Admin Leaderboard
+                    📊 Leaderboard
                   </Link>
+                  <button
+                    onClick={() => handleTakeTest(contest.id)}
+                    className="bg-purple-600 text-white px-3 sm:px-4 py-2 rounded-lg hover:bg-purple-700 text-xs sm:text-sm w-full"
+                  >
+                    🧪 Take Test
+                  </button>
                   <button
                     onClick={() => handleDeleteContest(contest.id, contest.title)}
                     className="bg-red-600 text-white px-3 sm:px-4 py-2 rounded-lg hover:bg-red-700 text-xs sm:text-sm w-full"
                   >
-                    Delete
+                    🗑️ Delete
                   </button>
                 </div>
               </div>
